@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Flash News AI - Sign Up</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&display=swap" rel="stylesheet"/>
+<script>
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        colors: {
+          "primary": "#1173d4",
+          "background-light": "#f6f7f8",
+          "background-dark": "#101922",
+        },
+        fontFamily: {
+          "display": ["Newsreader"]
+        },
+        borderRadius: { "DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px" },
+      },
+    },
+  }
+  </script>
+<style>
+  body { font-family: 'Newsreader', serif; }
+  </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-gray-800 dark:text-gray-200">
+<div class="flex flex-col min-h-screen">
+<header class="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm">
+<div class="container mx-auto px-4">
+<div class="flex items-center justify-between h-20 border-b border-gray-200 dark:border-gray-800">
+<div class="flex items-center gap-3">
+<a href="feed.html"><img src="logo1.png" alt="Flash News AI logo" class="w-10 h-10 object-contain"/></a>
+<h2 class="text-2xl font-bold text-gray-900 dark:text-white">Flash News AI</h2>
+</div>
+<nav class="hidden md:flex items-center gap-8">
+<a class="text-lg text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors" href="index.html">Home</a>
+<a class="text-lg text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors" href="features.html">Features</a>
+<a class="text-lg text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors" href="about.html">About</a>
+</nav>
+<div class="flex items-center gap-4">
+<a class="px-6 py-2 text-lg font-medium text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-800 rounded-full hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors" href="signin.html">Login</a>
+<a class="px-6 py-2 text-lg font-medium text-white bg-primary rounded-full hover:bg-primary/90 transition-colors" href="signup.html">Sign Up</a>
+</div>
+</div>
+</div>
+</header>
+
+<main class="flex-grow flex items-center justify-center px-4">
+<div class="w-full max-w-md p-8 space-y-8 bg-white dark:bg-gray-900/20 rounded-xl shadow-2xl shadow-gray-200 dark:shadow-black/20 my-10">
+<div class="text-center">
+<h1 class="text-3xl font-bold text-gray-900 dark:text-white">Create your account</h1>
+<p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Start your personalized, AI‑powered news feed</p>
+</div>
+
+<form class="space-y-6" action="feed.html">
+<div>
+<label class="text-sm font-medium text-gray-700 dark:text-gray-300" for="name">Full Name</label>
+<input id="name" name="name" type="text" autocomplete="name" placeholder="Alex Doe" class="mt-1 block w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-gray-300 dark:border-gray-700 rounded-lg placeholder-gray-400 dark:placeholder-gray-500 focus:ring-primary focus:border-primary"/>
+</div>
+
+<div>
+<label class="text-sm font-medium text-gray-700 dark:text-gray-300" for="email">Email</label>
+<input id="email" name="email" type="email" autocomplete="email" placeholder="you@example.com" class="mt-1 block w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-gray-300 dark:border-gray-700 rounded-lg placeholder-gray-400 dark:placeholder-gray-500 focus:ring-primary focus:border-primary"/>
+</div>
+
+<div>
+<label class="text-sm font-medium text-gray-700 dark:text-gray-300" for="password">Password</label>
+<input id="password" name="password" type="password" autocomplete="new-password" placeholder="••••••••" class="mt-1 block w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-gray-300 dark:border-gray-700 rounded-lg placeholder-gray-400 dark:placeholder-gray-500 focus:ring-primary focus:border-primary"/>
+</div>
+
+<div>
+<label class="text-sm font-medium text-gray-700 dark:text-gray-300" for="confirmPassword">Confirm Password</label>
+<input id="confirmPassword" name="confirmPassword" type="password" autocomplete="new-password" placeholder="••••••••" class="mt-1 block w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-gray-300 dark:border-gray-700 rounded-lg placeholder-gray-400 dark:placeholder-gray-500 focus:ring-primary focus:border-primary"/>
+</div>
+
+<div class="flex items-start gap-3">
+<input id="terms" name="terms" type="checkbox" class="mt-1 h-4 w-4 text-primary border-gray-300 dark:border-gray-700 rounded"/>
+<label for="terms" class="text-sm text-gray-600 dark:text-gray-400">I agree to the <a href="#" class="text-primary hover:underline">Terms</a> and <a href="#" class="text-primary hover:underline">Privacy Policy</a>.</label>
+    </div>
+
+<div>
+<button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">Create Account</button>
+</div>
+</form>
+
+<p class="text-center text-sm text-gray-500 dark:text-gray-400">Already have an account? <a class="font-medium text-primary hover:underline" href="signin.html">Log in</a></p>
+</div>
+</main>
+
+<footer class="bg-background-light dark:bg-background-dark border-t border-gray-200 dark:border-gray-800">
+<div class="container mx-auto px-4 py-10 text-center text-gray-500 dark:text-gray-400">
+<p>© 2024 Flash News AI</p>
+</div>
+</footer>
+</div>
+
+</body></html>
+
+
