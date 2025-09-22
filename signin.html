@@ -82,4 +82,82 @@
 </main>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL = "https://hznixdhsddcufaogcuyz.supabase.co";
+  const SUPABASE_ANON_KEY = "<PUT_YOUR_SUPABASE_ANON_KEY_HERE>";
+
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const form = document.querySelector('form');
+  const emailInput = document.getElementById('email');
+  const passwordInput = document.getElementById('password');
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const email = emailInput?.value?.trim();
+    const password = passwordInput?.value;
+
+    if (!email || !password) {
+      alert('Please enter email and password.');
+      return;
+    }
+
+    try {
+      const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      if (error) {
+        alert(error.message);
+        return;
+      }
+      window.location.href = 'feed.html';
+    } catch (err) {
+      alert('Something went wrong. Please try again.');
+      console.error(err);
+    }
+  });
+
+  // Optional: redirect if already logged in
+  (async () => {
+    const { data: sessionData } = await supabaseClient.auth.getSession();
+    if (sessionData?.session) {
+      window.location.href = 'feed.html';
+    }
+  })();
+</script>
+
+<div id="sb-status" class="fixed bottom-4 right-4 px-3 py-2 rounded-lg text-xs font-semibold bg-gray-800 text-white/90 opacity-80"></div>
+<script>
+  (async () => {
+    const statusEl = document.getElementById('sb-status');
+    if (!statusEl) return;
+
+    if (!SUPABASE_ANON_KEY || SUPABASE_ANON_KEY.includes('PUT_YOUR_SUPABASE_ANON_KEY_HERE')) {
+      statusEl.textContent = 'Supabase: missing anon key';
+      statusEl.classList.add('bg-red-600');
+      return;
+    }
+
+    try {
+      const { error } = await supabaseClient
+        .from('profiles')
+        .select('id', { count: 'exact', head: true })
+        .limit(1);
+
+      if (!error) {
+        statusEl.textContent = 'Supabase: connected';
+        statusEl.classList.add('bg-green-600');
+      } else {
+        // Permission errors still prove connectivity and project correctness
+        statusEl.textContent = `Supabase: reachable (${error.message})`;
+        statusEl.classList.add('bg-yellow-600');
+      }
+    } catch (e) {
+      statusEl.textContent = 'Supabase: connection failed';
+      statusEl.classList.add('bg-red-600');
+      console.error(e);
+    }
+  })();
+</script>
+
 </body></html>
