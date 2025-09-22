@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<link crossorigin="" href="https://fonts.gstatic.com/" rel="preconnect"/>
+<link as="style" href="https://fonts.googleapis.com/css2?display=swap&amp;family=Newsreader%3Awght%40400%3B500%3B700%3B800&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900" onload="this.rel='stylesheet'" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#1173d4",
+              "background-light": "#f6f7f8",
+              "background-dark": "#101922",
+            },
+            fontFamily: {
+              display: ["Newsreader"],
+            },
+            borderRadius: { DEFAULT: "0.5rem", lg: "1rem", xl: "1.5rem", full: "9999px" },
+          },
+        },
+      };
+    </script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<title>Flash News AI</title>
+<link href="data:image/x-icon;base64," rel="icon" type="image/x-icon"/>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-black dark:text-white">
+<div class="flex min-h-screen w-full flex-col">
+<header class="flex items-center justify-between border-b border-black/10 dark:border-white/10 px-4 sm:px-6 lg:px-8 py-3">
+<div class="flex items-center gap-4">
+<a href="feed.html"><img src="logo1.png" alt="Flash News AI logo" class="h-12 w-12 object-contain"/></a>
+<a href="landing page.html" class="text-xl font-bold">Flash News AI</a>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative hidden sm:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-black/50 dark:text-white/50"> search </span>
+<input class="w-full rounded-full border-black/10 bg-black/5 dark:border-white/10 dark:bg-white/5 py-2 pl-10 pr-4 text-base focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="Search" value=""/>
+</div>
+<div class="size-10 rounded-full bg-cover bg-center" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuC7BkXEe6soFk6AQ6s_ClaBC6SbVm5g-y1RsEB-lILPQnTL5re76qPd50H-6aECT4-QgvpnCObUl5WjtSmUaZWpZAQLBQ3wIbJ4ZWGflhU4VCWy2NY1hN6UQlA00JgKbpQCus-b2CvI8xLhF1weyoeDvQCcGjj7KO8V-nUHKu9xzhSTFeR_BQL3oeQuuODAE0vJaUmgTHOiiOeIKlN1QPoRU8lWtYWNV_VmmTSXYTlSFR8vHhORI-m-HXry1L_lkCyJ36T88iKaRDk");'></div>
+</div>
+</header>
+<main class="flex-1">
+<div class="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+<h2 class="px-4 text-3xl font-bold">News Feed</h2>
+<div class="mt-6 space-y-8">
+<div class="flex flex-col rounded-lg border border-black/10 bg-white/5 dark:border-white/10 dark:bg-black/5">
+<div class="flex flex-col gap-4 p-4 sm:flex-row">
+<div class="flex flex-1 flex-col gap-3">
+<div class="space-y-1">
+<p class="text-lg font-bold">Tech Giant Unveils Revolutionary AI Assistant</p>
+<p class="text-sm text-black/60 dark:text-white/60">
+                      The new AI assistant promises to redefine personal productivity and digital interaction.
+                    </p>
+</div>
+<a href="article.html" class="flex w-fit items-center justify-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90">
+<span>Read More</span>
+<span class="material-symbols-outlined text-base"> arrow_forward </span>
+</a>
+</div>
+<div class="aspect-video w-full flex-shrink-0 rounded-lg bg-cover bg-center sm:w-64" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCC9tWBHMVYnovtKGpGsCIHT2zbIANffq0r1kXbOjJ1vOC3F1TwZ5PWSY200ZngdoLQUC7MHcUqXX70-myteJuzv5U9YHujbq2dSFqDXKsPljL16ZThaYH9DVtecDIOeuLQ3wnDQu7Rmp0msem_3JABmfLS99r0VH5hgWmMC_fvAhUt8PmDXZq9itNz80_XotkLnHeAEAXsPs9Nd3G6sun-0RV1rl-M4IFhsJAYwjbOEUilhFbHIkBtdLRfI7YFucumivueEyD_9ig");'></div>
+</div>
+<div class="flex items-center gap-4 border-t border-black/10 px-4 py-2 dark:border-white/10">
+<button class="flex items-center gap-2 text-sm text-black/60 hover:text-primary dark:text-white/60 dark:hover:text-primary">
+<span class="material-symbols-outlined text-xl"> favorite_border </span>
+<span class="font-semibold">123</span>
+</button>
+<button class="flex items-center gap-2 text-sm text-black/60 hover:text-primary dark:text-white/60 dark:hover:text-primary">
+<span class="material-symbols-outlined text-xl"> chat_bubble_outline </span>
+<span class="font-semibold">45</span>
+</button>
+</div>
+</div>
+<div class="flex flex-col rounded-lg border border-black/10 bg-white/5 dark:border-white/10 dark:bg-black/5">
+<div class="flex flex-col gap-4 p-4 sm:flex-row">
+<div class="flex flex-1 flex-col gap-3">
+<div class="space-y-1">
+<p class="text-lg font-bold">Climate Change Report: Urgent Action Needed</p>
+<p class="text-sm text-black/60 dark:text-white/60">
+                      A comprehensive report highlights the critical need for immediate and decisive action to combat climate change.
+                    </p>
+</div>
+<a href="article.html" class="flex w-fit items-center justify-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90">
+<span>Read More</span>
+<span class="material-symbols-outlined text-base"> arrow_forward </span>
+</a>
+</div>
+<div class="aspect-video w-full flex-shrink-0 rounded-lg bg-cover bg-center sm:w-64" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuC7MtHt_tVO1rrcObFyH98m4ZJPQH0ocXz7BLoSQwdMraSXxMDRVCw3__kQpViuVIvjLHskQsBz-eabRN0GWghmM9YlbRMLOzsIvjOkGZSgnlC7afZlau3xp4kj-vSSbhTWN6ceYwVZswSwUUHQ3DS6nQs4hfEVpgedS82pgcbz0CNwppjx0S7t0IBGqX2IrxVnAFxvq8cYcJy9hPSphXHn3V4KKaEF86_oZYWRPI9TwiKgMhBgh2X_zLwZ2jOnh0lKRrsGw9Eg-6w");'></div>
+</div>
+<div class="flex items-center gap-4 border-t border-black/10 px-4 py-2 dark:border-white/10">
+<button class="flex items-center gap-2 text-sm text-black/60 hover:text-primary dark:text-white/60 dark:hover:text-primary">
+<span class="material-symbols-outlined text-xl"> favorite_border </span>
+<span class="font-semibold">87</span>
+</button>
+<button class="flex items-center gap-2 text-sm text-black/60 hover:text-primary dark:text-white/60 dark:hover:text-primary">
+<span class="material-symbols-outlined text-xl"> chat_bubble_outline </span>
+<span class="font-semibold">22</span>
+</button>
+</div>
+</div>
+<div class="flex flex-col rounded-lg border border-black/10 bg-white/5 dark:border-white/10 dark:bg-black/5">
+<div class="flex flex-col gap-4 p-4 sm:flex-row">
+<div class="flex flex-1 flex-col gap-3">
+<div class="space-y-1">
+<p class="text-lg font-bold">New Study Reveals Benefits of Mindfulness Meditation</p>
+<p class="text-sm text-black/60 dark:text-white/60">
+                      Research indicates that regular mindfulness meditation can significantly reduce stress and improve mental well-being.
+                    </p>
+</div>
+<a href="article.html" class="flex w-fit items-center justify-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90">
+<span>Read More</span>
+<span class="material-symbols-outlined text-base"> arrow_forward </span>
+</a>
+</div>
+<div class="aspect-video w-full flex-shrink-0 rounded-lg bg-cover bg-center sm:w-64" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCMxIS4Yp0p0TcMwPNgvL36_JQAv2PQ1NBw4sbsLD1tKVcF4IlcexKREIsB6UBgateNaEkkqALCDzPTGa2q86-y5ye_juAf9dPKY24w9nlk-Zxg_efPlRym-hsEeCQsnCTyhPhP_WsRMy3PXuBuEWpkjmEHGRU4BrtQ8rAzTlsZV7L3OgTUi613PyBDCQ15rw81KgxLcOC6zoJ9U2oyMGpDIiB0_S873H_aBW2gW_TLrWVeGafvkSmaFXiVFc1gBBkageBGiVNTb_o");'></div>
+</div>
+<div class="flex items-center gap-4 border-t border-black/10 px-4 py-2 dark:border-white/10">
+<button class="flex items-center gap-2 text-sm text-black/60 hover:text-primary dark:text-white/60 dark:hover:text-primary">
+<span class="material-symbols-outlined text-xl"> favorite_border </span>
+<span class="font-semibold">150</span>
+</button>
+<button class="flex items-center gap-2 text-sm text-black/60 hover:text-primary dark:text-white/60 dark:hover:text-primary">
+<span class="material-symbols-outlined text-xl"> chat_bubble_outline </span>
+<span class="font-semibold">60</span>
+</button>
+</div>
+</div>
+<div class="flex flex-col rounded-lg border border-black/10 bg-white/5 dark:border-white/10 dark:bg-black/5">
+<div class="flex flex-col gap-4 p-4 sm:flex-row">
+<div class="flex flex-1 flex-col gap-3">
+<div class="space-y-1">
+<p class="text-lg font-bold">Global Economy Shows Signs of Recovery</p>
+<p class="text-sm text-black/60 dark:text-white/60">
+                      Recent economic data suggests a gradual recovery from the global downturn, with increased consumer spending and business investment.
+                    </p>
+</div>
+<a href="article.html" class="flex w-fit items-center justify-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90">
+<span>Read More</span>
+<span class="material-symbols-outlined text-base"> arrow_forward </span>
+</a>
+</div>
+<div class="aspect-video w-full flex-shrink-0 rounded-lg bg-cover bg-center sm:w-64" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCPgWdv_oNucekgtg4pPxIlQNRoW8ifaiZ4enz52s43sx89tcXYJXfPC-QBGAQ5BF8iYyYpS40WjG2-0rnKUITnvCnWM8C7d4jf-EMG36uFcBFAYUIlk4ncPLfGNSAI2TlFAHEl8UXRgtkJ3R8Ct2EBYNqXX1buOcxRaQdQLDSaYOTYRaCvmDj1sRzXS90IdpYwivK_NsOzk445XfYzIjKRyVSuztgRL-PoSzxU66M6-dlbZP1u-LqLRE6Nn_jQyKwtcDXKcdAYqMI");'></div>
+</div>
+<div class="flex items-center gap-4 border-t border-black/10 px-4 py-2 dark:border-white/10">
+<button class="flex items-center gap-2 text-sm text-black/60 hover:text-primary dark:text-white/60 dark:hover:text-primary">
+<span class="material-symbols-outlined text-xl"> favorite_border </span>
+<span class="font-semibold">95</span>
+</button>
+<button class="flex items-center gap-2 text-sm text-black/60 hover:text-primary dark:text-white/60 dark:hover:text-primary">
+<span class="material-symbols-outlined text-xl"> chat_bubble_outline </span>
+<span class="font-semibold">35</span>
+</button>
+</div>
+</div>
+<div class="flex flex-col rounded-lg border border-black/10 bg-white/5 dark:border-white/10 dark:bg-black/5">
+<div class="flex flex-col gap-4 p-4 sm:flex-row">
+<div class="flex flex-1 flex-col gap-3">
+<div class="space-y-1">
+<p class="text-lg font-bold">Breakthrough in Cancer Research Offers New Hope</p>
+<p class="text-sm text-black/60 dark:text-white/60">
+                      Scientists have made a significant advancement in cancer treatment, potentially leading to more effective therapies.
+                    </p>
+</div>
+<a href="article.html" class="flex w-fit items-center justify-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90">
+<span>Read More</span>
+<span class="material-symbols-outlined text-base"> arrow_forward </span>
+</a>
+</div>
+<div class="aspect-video w-full flex-shrink-0 rounded-lg bg-cover bg-center sm:w-64" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAXrrjo8eQPqcTh-xvLXxDVVtorj2mpFl4MNfPXSuKGL4e7xgb8aiRttdHsSguNlYyzr6HC-6nGWR3BVnCBQi9SvJwV5IT7Y0FTY9qJnBppkq_6pl-mJUSQhRuK7oVbrX5Fm0Tnge6wOoA4Bt927Ik0soSFRWAySVMreMbvrE8_vMyXsUx5Q8yS_qLrHMYm0LGBYJGMAJgIAAl6AhZObVUfi6e6X-I3V_QuF1ihR8XYZbzxbA01wZJTxId4zCV49QTWxo6rVzlfutI");'></div>
+</div>
+<div class="flex items-center gap-4 border-t border-black/10 px-4 py-2 dark:border-white/10">
+<button class="flex items-center gap-2 text-sm text-black/60 hover:text-primary dark:text-white/60 dark:hover:text-primary">
+<span class="material-symbols-outlined text-xl"> favorite_border </span>
+<span class="font-semibold">110</span>
+</button>
+<button class="flex items-center gap-2 text-sm text-black/60 hover:text-primary dark:text-white/60 dark:hover:text-primary">
+<span class="material-symbols-outlined text-xl"> chat_bubble_outline </span>
+<span class="font-semibold">50</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+
+</body></html>

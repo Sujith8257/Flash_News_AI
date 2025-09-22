@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<title>Flash News AI - About</title>
+<link href="data:image/x-icon;base64," rel="icon" type="image/x-icon"/>
+<link crossorigin="" href="https://fonts.gstatic.com/" rel="preconnect"/>
+<link as="style" href="https://fonts.googleapis.com/css2?display=swap&amp;family=Newsreader%3Awght%40400%3B500%3B700%3B800&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900" onload="this.rel='stylesheet'" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#1173d4",
+            "background-light": "#f6f7f8",
+            "background-dark": "#101922",
+          },
+          fontFamily: { "display": ["Newsreader"] },
+          borderRadius: { "DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px" },
+        },
+      },
+    }
+  </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-gray-800 dark:text-gray-200">
+<div class="flex flex-col min-h-screen">
+<header class="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm">
+<div class="container mx-auto px-4">
+<div class="flex items-center justify-between h-20 border-b border-gray-200 dark:border-gray-800">
+<div class="flex items-center gap-3">
+<a href="feed.html"><img src="logo1.png" alt="Flash News AI logo" class="w-10 h-10 object-contain"/></a>
+<h2 class="text-2xl font-bold text-gray-900 dark:text-white">Flash News AI</h2>
+</div>
+<nav class="hidden md:flex items-center gap-8">
+<a class="text-lg text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors" href="index.html">Home</a>
+<a class="text-lg text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors" href="features.html">Features</a>
+<a class="text-lg text-gray-900 dark:text-white font-semibold" href="about.html">About</a>
+</nav>
+<div class="flex items-center gap-4">
+<a class="px-6 py-2 text-lg font-medium text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-800 rounded-full hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors" href="signin.html">Login</a>
+<a class="px-6 py-2 text-lg font-medium text-white bg-primary rounded-full hover:bg-primary/90 transition-colors" href="signin.html">Sign Up</a>
+</div>
+</div>
+</div>
+</header>
+<main class="flex-grow">
+<section class="py-16 md:py-24">
+<div class="container mx-auto px-4">
+<h1 class="text-4xl md:text-5xl font-bold mb-6 text-gray-900 dark:text-white">About Flash News AI</h1>
+<p class="text-lg md:text-xl text-gray-600 dark:text-gray-400 max-w-3xl">Flash News AI is a lightweight news reader that uses AI to summarize and prioritize stories in a fast, distraction‑free feed.</p>
+
+<div class="mt-12">
+<h2 class="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Developers</h2>
+<ul class="list-disc pl-6 space-y-2 text-gray-700 dark:text-gray-300">
+<li>TANGUTURI VENKATA SUJITH GOPI</li>
+<li>DAGGUPATI SATHWIK CHOWDARY</li>
+<li>GANIPINENI BHARDWAJ NAIDU</li>
+<li>BIREDDY GOWTHAM</li>
+</ul>
+</div>
+
+<div class="mt-12 grid md:grid-cols-3 gap-8">
+<div class="bg-white dark:bg-background-dark p-6 rounded-xl border border-gray-200 dark:border-gray-800">
+<h3 class="text-xl font-bold mb-2 text-gray-900 dark:text-white">Mission</h3>
+<p class="text-gray-600 dark:text-gray-400">Deliver the fastest way to understand the news by combining high‑quality sources with AI summaries.</p>
+</div>
+<div class="bg-white dark:bg-background-dark p-6 rounded-xl border border-gray-200 dark:border-gray-800">
+<h3 class="text-xl font-bold mb-2 text-gray-900 dark:text-white">Values</h3>
+<p class="text-gray-600 dark:text-gray-400">Clarity, speed, and trust. We prioritize accuracy and a clean reading experience.</p>
+</div>
+<div class="bg-white dark:bg-background-dark p-6 rounded-xl border border-gray-200 dark:border-gray-800">
+<h3 class="text-xl font-bold mb-2 text-gray-900 dark:text-white">Contact</h3>
+<p class="text-gray-600 dark:text-gray-400">Questions or feedback? Reach out via the Contact link in the footer.</p>
+</div>
+</div>
+</div>
+</section>
+</main>
+<footer class="bg-background-light dark:bg-background-dark border-t border-gray-200 dark:border-gray-800">
+<div class="container mx-auto px-4 py-10 text-center text-gray-500 dark:text-gray-400">
+<p>© 2024 Flash News AI</p>
+</div>
+</footer>
+</div>
+
+</body></html>
