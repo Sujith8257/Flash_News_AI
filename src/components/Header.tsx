@@ -1,5 +1,4 @@
 import { Link, useLocation } from "react-router-dom"
-import { Button } from "./ui/button"
 
 export function Header() {
   const location = useLocation()
