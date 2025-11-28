@@ -1,7 +1,6 @@
 import { Link, useParams } from "react-router-dom"
 import { useState, useEffect } from "react"
 import { fetchArticleFromSupabase, isSupabaseConfigured, type Article } from "../lib/supabase"
-import { api } from "../lib/api"
 
 export function Article() {
   const { id } = useParams<{ id?: string }>()
@@ -19,53 +18,23 @@ export function Article() {
         return
       }
       
-      // Try Supabase first if configured
-      if (isSupabaseConfigured()) {
-        try {
-          const supabaseArticle = await fetchArticleFromSupabase(id)
-          if (supabaseArticle) {
-            setArticle(supabaseArticle)
-          } else {
-            setError("Article not found.")
-          }
-        } catch (supabaseError) {
-          console.error("Supabase fetch failed, trying backend API:", supabaseError)
-          // Fallback to backend API
-          throw supabaseError
-        }
+      // Check if Supabase is configured
+      if (!isSupabaseConfigured()) {
+        setError("Supabase is not configured. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your .env file.")
+        return
+      }
+      
+      // Fetch article directly from Supabase
+      const supabaseArticle = await fetchArticleFromSupabase(id)
+      
+      if (supabaseArticle) {
+        setArticle(supabaseArticle)
       } else {
-        // Fallback to backend API if Supabase not configured
-        const url = api.getArticle(id)
-        const response = await fetch(url)
-        const data = await response.json()
-        
-        if (data.success && data.article) {
-          setArticle(data.article as Article)
-        } else {
-          setError("No article found.")
-        }
+        setError("Article not found.")
       }
     } catch (err) {
-      // If Supabase failed, try backend API as fallback
-      if (isSupabaseConfigured() && id) {
-        try {
-          const url = api.getArticle(id)
-          const response = await fetch(url)
-          const data = await response.json()
-          
-          if (data.success && data.article) {
-            setArticle(data.article as Article)
-          } else {
-            setError("Article not found.")
-          }
-        } catch (apiError) {
-          setError("Failed to fetch article from both Supabase and API server.")
-          console.error(apiError)
-        }
-      } else {
-        setError("Failed to fetch article. Make sure the API server is running.")
-        console.error(err)
-      }
+      setError("Failed to fetch article from Supabase. Please check your connection and Supabase configuration.")
+      console.error("Error fetching article:", err)
     } finally {
       setLoading(false)
     }

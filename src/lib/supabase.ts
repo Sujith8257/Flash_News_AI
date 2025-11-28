@@ -43,7 +43,7 @@ export interface Article {
 // Fetch all articles from Supabase
 export async function fetchArticlesFromSupabase(): Promise<Article[]> {
   if (!supabaseClient) {
-    throw new Error('Supabase client not initialized')
+    throw new Error('Supabase client not initialized. Please configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file.')
   }
 
   try {
@@ -53,7 +53,8 @@ export async function fetchArticlesFromSupabase(): Promise<Article[]> {
       .order('created_at', { ascending: false })
 
     if (error) {
-      throw error
+      console.error('Supabase query error:', error)
+      throw new Error(`Failed to fetch articles: ${error.message}`)
     }
 
     return (data || []) as Article[]
@@ -66,7 +67,7 @@ export async function fetchArticlesFromSupabase(): Promise<Article[]> {
 // Fetch a single article by ID
 export async function fetchArticleFromSupabase(id: string): Promise<Article | null> {
   if (!supabaseClient) {
-    throw new Error('Supabase client not initialized')
+    throw new Error('Supabase client not initialized. Please configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file.')
   }
 
   try {
@@ -78,10 +79,11 @@ export async function fetchArticleFromSupabase(id: string): Promise<Article | nu
 
     if (error) {
       if (error.code === 'PGRST116') {
-        // No rows returned
+        // No rows returned - article not found
         return null
       }
-      throw error
+      console.error('Supabase query error:', error)
+      throw new Error(`Failed to fetch article: ${error.message}`)
     }
 
     return data as Article
