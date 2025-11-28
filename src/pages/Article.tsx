@@ -44,6 +44,15 @@ export function Article() {
     fetchArticle()
   }, [id])
 
+  // Update document title when article is loaded
+  useEffect(() => {
+    if (article) {
+      document.title = `${article.title} - Flash News AI`
+    } else {
+      document.title = "Article - Flash News AI"
+    }
+  }, [article])
+
   // Format content into paragraphs with better structure
   const formatContent = (content: string) => {
     if (!content) return []

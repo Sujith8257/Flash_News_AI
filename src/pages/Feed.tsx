@@ -8,6 +8,9 @@ export function Feed() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    // Set page title
+    document.title = "News Feed - Flash News AI"
+    
     const fetchArticles = async () => {
       try {
         setLoading(true)
@@ -101,7 +104,10 @@ export function Feed() {
       </header>
       <main className="flex-1">
         <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-          <h2 className="px-4 text-3xl font-bold">News Feed</h2>
+          <div className="mb-8">
+            <h1 className="text-4xl md:text-5xl font-extrabold mb-2 text-black dark:text-white">News Feed</h1>
+            <p className="text-gray-600 dark:text-gray-400 text-lg">Stay updated with the latest global events</p>
+          </div>
           <div className="mt-6 space-y-8">
             {loading && (
               <div className="flex items-center justify-center py-12">
