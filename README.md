@@ -67,4 +67,20 @@ The application uses a black and white color scheme:
 - Tailwind CSS
 - shadcn/ui
 - React Router
+- Flask (Backend API)
+- CrewAI (AI Article Generation)
+- Gemini AI
+
+## Deployment
+
+For deployment instructions, see:
+- **[QUICK_DEPLOY.md](./QUICK_DEPLOY.md)** - Fast deployment guide (Railway + Vercel)
+- **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Comprehensive deployment guide with multiple options
+
+### Quick Start (Deploy in 10 minutes)
+
+1. **Backend**: Deploy to [Railway](https://railway.app) (set root directory to `MODEL`)
+2. **Frontend**: Deploy to [Vercel](https://vercel.com)
+3. Set environment variables (see deployment guides)
+4. Done!
 

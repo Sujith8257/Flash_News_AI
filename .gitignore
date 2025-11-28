@@ -32,3 +32,11 @@ dist-ssr
 MODEL/articles/
 MODEL/articles.json
 MODEL/latest_article.json
+
+# Environment files
+.env
+.env.local
+.env.production
+MODEL/.env
+MODEL/.env.local
+MODEL/.env.production

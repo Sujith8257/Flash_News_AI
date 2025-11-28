@@ -71,12 +71,31 @@ def fetch_rss_feed(url):
         feed = feedparser.parse(url)
         articles = []
         for entry in feed.entries[:20]:  # Limit to 20 entries
+            # Extract image from media:content or enclosure
+            image_url = ''
+            if hasattr(entry, 'media_content'):
+                for media in entry.media_content:
+                    if media.get('type', '').startswith('image/'):
+                        image_url = media.get('url', '')
+                        break
+            if not image_url and hasattr(entry, 'enclosures'):
+                for enclosure in entry.enclosures:
+                    if enclosure.get('type', '').startswith('image/'):
+                        image_url = enclosure.get('href', '')
+                        break
+            # Also check for media:thumbnail
+            if not image_url and hasattr(entry, 'media_thumbnail'):
+                for thumb in entry.media_thumbnail:
+                    image_url = thumb.get('url', '')
+                    break
+            
             articles.append({
                 'title': entry.get('title', ''),
                 'description': entry.get('description', ''),
                 'link': entry.get('link', ''),
                 'published': entry.get('published', ''),
-                'source': feed.feed.get('title', 'RSS Feed')
+                'source': feed.feed.get('title', 'RSS Feed'),
+                'image_url': image_url
             })
         return articles
     except Exception as e:
@@ -104,13 +123,34 @@ def fetch_reddit_news():
                 data = response.json()
                 for post in data.get('data', {}).get('children', []):
                     post_data = post.get('data', {})
+                    # Extract image URL from Reddit post
+                    image_url = ''
+                    # Check preview images
+                    if 'preview' in post_data and 'images' in post_data['preview']:
+                        if post_data['preview']['images']:
+                            image_url = post_data['preview']['images'][0].get('source', {}).get('url', '')
+                            # Reddit URLs are escaped, unescape them
+                            if image_url:
+                                image_url = image_url.replace('&amp;', '&')
+                    # Check thumbnail
+                    if not image_url:
+                        thumbnail = post_data.get('thumbnail', '')
+                        if thumbnail and thumbnail not in ['self', 'default', 'nsfw']:
+                            image_url = thumbnail
+                    # Check URL if it's a direct image link
+                    url_link = post_data.get('url', '')
+                    if not image_url and url_link:
+                        if any(ext in url_link.lower() for ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp']):
+                            image_url = url_link
+                    
                     articles.append({
                         'title': post_data.get('title', ''),
                         'description': post_data.get('selftext', ''),
                         'link': f"https://reddit.com{post_data.get('permalink', '')}",
                         'published': datetime.fromtimestamp(post_data.get('created_utc', 0)).isoformat(),
                         'source': f"Reddit r/{subreddit}",
-                        'score': post_data.get('score', 0)
+                        'score': post_data.get('score', 0),
+                        'image_url': image_url
                     })
     except Exception as e:
         print(f"Reddit error: {e}")
@@ -146,14 +186,20 @@ def aggregate_all_news():
     
     for article in google_news:
         article['source_name'] = 'Google News'
+        if 'image_url' not in article:
+            article['image_url'] = ''
         all_articles.append(article)
     
     for article in bbc_news:
         article['source_name'] = 'BBC'
+        if 'image_url' not in article:
+            article['image_url'] = ''
         all_articles.append(article)
     
     for article in reddit_news:
         article['source_name'] = article.get('source', 'Reddit')
+        if 'image_url' not in article:
+            article['image_url'] = ''
         all_articles.append(article)
     
     return all_articles
@@ -161,53 +207,122 @@ def aggregate_all_news():
 # Create CrewAI tools using BaseTool
 class FetchAllNewsSourcesTool(BaseTool):
     name: str = "fetch_all_news_sources"
-    description: str = "Fetch real-time news from all available sources: NewsAPI, NewsData.io, GDELT, Google News RSS, BBC RSS, and Reddit. Returns aggregated news articles with full content and image URLs."
+    description: str = "Fetch real-time news from all available sources: NewsAPI, NewsData.io, GDELT, Google News RSS, BBC RSS, and Reddit. Returns aggregated news articles with full content and image URLs. IMPORTANT: Extract and include image_url field from each article."
     
     def _run(self) -> str:
         result = aggregate_all_news()
-        return json.dumps(result, indent=2, default=str)
+        # Ensure image URLs are prominently included in the output
+        formatted_result = []
+        for article in result:
+            formatted_article = {
+                "title": article.get('title', ''),
+                "description": article.get('description', ''),
+                "content": article.get('content', ''),
+                "url": article.get('url', ''),
+                "image_url": article.get('image_url', '') or article.get('urlToImage', '') or article.get('image', ''),
+                "source_name": article.get('source_name', ''),
+                "published": article.get('published', '') or article.get('publishedAt', ''),
+            }
+            formatted_result.append(formatted_article)
+        return json.dumps(formatted_result, indent=2, default=str)
 
 class FetchNewsAPITool(BaseTool):
     name: str = "fetch_newsapi_articles"
-    description: str = "Fetch top headlines from NewsAPI for India."
+    description: str = "Fetch top headlines from NewsAPI for India. Returns articles with image URLs in urlToImage field."
     
     def _run(self) -> str:
         result = fetch_newsapi()
-        return json.dumps(result, indent=2, default=str)
+        # Format to highlight image URLs
+        formatted = []
+        for article in result:
+            formatted.append({
+                "title": article.get('title', ''),
+                "description": article.get('description', ''),
+                "url": article.get('url', ''),
+                "image_url": article.get('urlToImage', ''),
+                "source": article.get('source', {}).get('name', ''),
+                "publishedAt": article.get('publishedAt', '')
+            })
+        return json.dumps(formatted, indent=2, default=str)
 
 class FetchNewsDataTool(BaseTool):
     name: str = "fetch_newsdata_articles"
-    description: str = "Fetch technology news from NewsData.io."
+    description: str = "Fetch technology news from NewsData.io. Returns articles with image URLs in image_url field."
     
     def _run(self) -> str:
         result = fetch_newsdata()
-        return json.dumps(result, indent=2, default=str)
+        # Format to highlight image URLs
+        formatted = []
+        for article in result:
+            formatted.append({
+                "title": article.get('title', ''),
+                "description": article.get('description', ''),
+                "url": article.get('link', ''),
+                "image_url": article.get('image_url', ''),
+                "source": article.get('source_id', ''),
+                "pubDate": article.get('pubDate', '')
+            })
+        return json.dumps(formatted, indent=2, default=str)
 
 class FetchGDELTTool(BaseTool):
     name: str = "fetch_gdelt_articles"
-    description: str = "Fetch global events from GDELT API. Provide a query term to search for specific topics. Call with: fetch_gdelt_articles(query='your_search_term')"
+    description: str = "Fetch global events from GDELT API. Provide a query term to search for specific topics. Returns articles with image URLs in image field. Call with: fetch_gdelt_articles(query='your_search_term')"
     
     def _run(self, query: str = "world") -> str:
         result = fetch_gdelt(query)
-        return json.dumps(result, indent=2, default=str)
+        # Format to highlight image URLs
+        formatted = []
+        for article in result:
+            formatted.append({
+                "title": article.get('title', ''),
+                "url": article.get('url', ''),
+                "image_url": article.get('image', ''),
+                "source": article.get('source', ''),
+                "published": article.get('seendate', '')
+            })
+        return json.dumps(formatted, indent=2, default=str)
 
 class FetchRSSFeedsTool(BaseTool):
     name: str = "fetch_rss_feeds"
-    description: str = "Fetch news from Google News RSS and BBC RSS feeds."
+    description: str = "Fetch news from Google News RSS and BBC RSS feeds. Returns articles with image URLs extracted from media content."
     
     def _run(self) -> str:
         google = fetch_google_news_rss()
         bbc = fetch_bbc_rss()
-        result = {"google_news": google, "bbc_news": bbc}
+        # Format to highlight image URLs
+        formatted_google = [{
+            "title": a.get('title', ''),
+            "description": a.get('description', ''),
+            "url": a.get('link', ''),
+            "image_url": a.get('image_url', ''),
+            "published": a.get('published', '')
+        } for a in google]
+        formatted_bbc = [{
+            "title": a.get('title', ''),
+            "description": a.get('description', ''),
+            "url": a.get('link', ''),
+            "image_url": a.get('image_url', ''),
+            "published": a.get('published', '')
+        } for a in bbc]
+        result = {"google_news": formatted_google, "bbc_news": formatted_bbc}
         return json.dumps(result, indent=2, default=str)
 
 class FetchRedditNewsTool(BaseTool):
     name: str = "fetch_reddit_news"
-    description: str = "Fetch top posts from Reddit subreddits: r/news, r/worldnews, r/technology."
+    description: str = "Fetch top posts from Reddit subreddits: r/news, r/worldnews, r/technology. Returns posts with image URLs from previews or direct image links."
     
     def _run(self) -> str:
         result = fetch_reddit_news()
-        return json.dumps(result, indent=2, default=str)
+        # Format to highlight image URLs
+        formatted = [{
+            "title": a.get('title', ''),
+            "description": a.get('description', ''),
+            "url": a.get('link', ''),
+            "image_url": a.get('image_url', ''),
+            "source": a.get('source', ''),
+            "score": a.get('score', 0)
+        } for a in result]
+        return json.dumps(formatted, indent=2, default=str)
 
 # Instantiate tools
 fetch_all_news_sources_tool = FetchAllNewsSourcesTool()
@@ -271,6 +386,9 @@ research_task = Task(
     - Complete descriptions and details
     - Source URLs (multiple sources per event for verification)
     - Original images from the news sources (image URLs from articles, NOT AI-generated)
+      * Extract image URLs from the news data (urlToImage, image_url, image fields)
+      * Include images in the output with clear labels like "Image: [URL]" or "Images: [URL1, URL2]"
+      * Only include original news images, never AI-generated images
     - Publication dates and timestamps
     - Author information if available
     - Source names and credibility indicators
@@ -359,9 +477,18 @@ write_task = Task(
     - Format: "Source: [Source Name] - [URL]"
     - List all sources used, one per line
     
+    Also include an "Images" section with:
+    - Image URLs from the original news sources
+    - Format: "Image: [URL]" or "Images: [URL1], [URL2], ..."
+    - Only include original news images, NOT AI-generated images
+    
     Example format:
     ---
     [Article content here]
+    
+    Images:
+    Image: https://example.com/image1.jpg
+    Image: https://example.com/image2.jpg
     
     Sources:
     Source: BBC News - https://www.bbc.com/news/article1
@@ -375,8 +502,9 @@ write_task = Task(
     - Comprehensive article content (500-1500 words)
     - Lively, energetic writing style
     - Proper paragraph structure
+    - Images section with image URLs from news sources
     - Sources section at the bottom with source names and URLs
-    Format: "Source: [Name] - [URL]" for each source
+    Format: "Image: [URL]" for images and "Source: [Name] - [URL]" for sources
     """,
     agent=copywriter,
     async_execution=False  # ensure it runs after validation completes

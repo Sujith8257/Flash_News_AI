@@ -1,9 +1,17 @@
 import { Link, useParams } from "react-router-dom"
 import { useState, useEffect } from "react"
+import { api } from "../lib/api"
 
 interface Source {
   name: string
   url: string
+}
+
+interface RelatedArticle {
+  id: string
+  title: string
+  created_at: string
+  similarity?: number
 }
 
 interface ArticleData {
@@ -11,6 +19,8 @@ interface ArticleData {
   title: string
   content: string
   sources: Source[]
+  images?: string[]
+  related_articles?: RelatedArticle[]
   full_text?: string
   created_at?: string
 }
@@ -26,11 +36,7 @@ export function Article() {
       setLoading(true)
       setError(null)
       
-      let url = 'http://localhost:5000/api/article'
-      if (id) {
-        url = `http://localhost:5000/api/article/${id}`
-      }
-      
+      const url = api.getArticle(id)
       const response = await fetch(url)
       const data = await response.json()
       
@@ -51,15 +57,48 @@ export function Article() {
     fetchArticle()
   }, [id])
 
-  // Format content into paragraphs
+  // Format content into paragraphs with better structure
   const formatContent = (content: string) => {
     if (!content) return []
-    return content.split('\n\n').filter(p => p.trim().length > 0)
+    
+    // Split by double newlines first
+    let paragraphs = content.split('\n\n').filter(p => p.trim().length > 0)
+    
+    // Further split long paragraphs that might have single newlines
+    const formatted: string[] = []
+    paragraphs.forEach(para => {
+      // If paragraph is very long, try to split by single newlines
+      if (para.length > 500 && para.includes('\n')) {
+        const subParas = para.split('\n').filter(p => p.trim().length > 0)
+        formatted.push(...subParas)
+      } else {
+        formatted.push(para)
+      }
+    })
+    
+    // Clean up paragraphs
+    return formatted.map(p => p.trim()).filter(p => p.length > 0)
   }
 
   return (
     <div className="relative flex min-h-screen w-full flex-col bg-white dark:bg-black text-black dark:text-white">
       <main className="mx-auto w-full max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
+        <style>{`
+          .article-content p {
+            text-align: justify;
+            hyphens: auto;
+            -webkit-hyphens: auto;
+            -ms-hyphens: auto;
+          }
+          .article-content p:first-of-type {
+            font-size: 1.25rem;
+            line-height: 1.9;
+            color: rgb(55, 65, 81);
+          }
+          .dark .article-content p:first-of-type {
+            color: rgb(209, 213, 219);
+          }
+        `}</style>
         <div className="mb-8">
           <Link
             to="/feed"
@@ -101,46 +140,162 @@ export function Article() {
         )}
 
         {article && !loading && (
-          <article className="prose prose-lg dark:prose-invert max-w-none">
-            <div className="mb-4">
-              <h1 className="text-4xl font-bold mb-2">{article.title}</h1>
-              {article.created_at && (
-                <p className="text-sm text-gray-500 dark:text-gray-500">
-                  Published: {new Date(article.created_at).toLocaleDateString('en-US', { 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })}
-                </p>
-              )}
-            </div>
-            
-            {formatContent(article.content).map((paragraph, index) => (
-              <p key={`para-${index}-${paragraph.substring(0, 20)}`} className="text-lg leading-relaxed text-gray-600 dark:text-gray-400 mb-4">
-                {paragraph}
-              </p>
-            ))}
+          <article className="max-w-none">
+            {/* Featured Image */}
+            {article.images && article.images.length > 0 && (
+              <div className="mb-10 rounded-xl overflow-hidden shadow-lg">
+                <img
+                  src={article.images[0]}
+                  alt={article.title}
+                  className="w-full h-auto object-cover"
+                  onError={(e) => {
+                    // Hide image if it fails to load
+                    const target = e.target as HTMLImageElement
+                    target.style.display = 'none'
+                  }}
+                />
+              </div>
+            )}
 
-            {article.sources && article.sources.length > 0 && (
-              <div className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-800">
-                <h2 className="text-2xl font-bold mb-4">Sources</h2>
-                <ul className="space-y-2">
-                  {article.sources.map((source, index) => (
-                    <li key={`source-${index}-${source.url}`} className="text-sm text-gray-600 dark:text-gray-400">
-                      <span className="font-semibold">Source: </span>
-                      <a
-                        href={source.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 dark:text-blue-400 hover:underline"
-                      >
-                        {source.name} - {source.url}
-                      </a>
-                    </li>
+            {/* Article Header */}
+            <header className="mb-8 pb-6 border-b border-gray-200 dark:border-gray-800">
+              <h1 className="text-5xl font-bold mb-4 text-black dark:text-white leading-tight">
+                {article.title}
+              </h1>
+              {article.created_at && (
+                <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-500">
+                  <time dateTime={article.created_at}>
+                    {new Date(article.created_at).toLocaleDateString('en-US', { 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </time>
+                  <span className="text-gray-300 dark:text-gray-700">•</span>
+                  <span>Flash News AI</span>
+                </div>
+              )}
+            </header>
+            
+            {/* Article Content */}
+            <div className="article-content space-y-6">
+              {formatContent(article.content).map((paragraph, index) => {
+                // Check if paragraph is a heading (starts with # or is short and bold-like)
+                const isHeading = paragraph.length < 100 && (
+                  paragraph.startsWith('#') || 
+                  paragraph.toUpperCase() === paragraph ||
+                  /^[A-Z][^.!?]*:$/.test(paragraph)
+                )
+                
+                if (isHeading && paragraph.length < 100) {
+                  return (
+                    <h2 key={`para-${index}-${paragraph.substring(0, 20)}`} className="text-2xl font-bold mt-8 mb-4 text-black dark:text-white">
+                      {paragraph.replace(/^#+\s*/, '')}
+                    </h2>
+                  )
+                }
+                
+                return (
+                  <p 
+                    key={`para-${index}-${paragraph.substring(0, 20)}`} 
+                    className="text-lg leading-8 text-gray-700 dark:text-gray-300 font-normal"
+                    style={{ textAlign: 'justify' }}
+                  >
+                    {paragraph}
+                  </p>
+                )
+              })}
+            </div>
+
+            {/* Additional Images */}
+            {article.images && article.images.length > 1 && (
+              <div className="my-12">
+                <h3 className="text-xl font-semibold mb-4 text-black dark:text-white">Additional Images</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {article.images.slice(1).map((imageUrl, index) => (
+                    <div key={`img-${index}-${imageUrl.substring(0, 20)}`} className="rounded-xl overflow-hidden shadow-md">
+                      <img
+                        src={imageUrl}
+                        alt={`${article.title} - ${index + 2}`}
+                        className="w-full h-auto object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement
+                          target.style.display = 'none'
+                        }}
+                      />
+                    </div>
                   ))}
-                </ul>
+                </div>
+              </div>
+            )}
+
+            {/* Related Articles */}
+            {article.related_articles && article.related_articles.length > 0 && (
+              <div className="mt-16 pt-8 border-t-2 border-gray-200 dark:border-gray-800">
+                <h2 className="text-3xl font-bold mb-6 text-black dark:text-white">Related Articles</h2>
+                <div className="space-y-4">
+                  {article.related_articles.map((related, index) => (
+                    <div 
+                      key={`related-${index}-${related.id}`} 
+                      className="bg-gray-50 dark:bg-gray-900 p-5 rounded-lg border border-gray-200 dark:border-gray-800 hover:shadow-md transition-shadow"
+                    >
+                      <Link
+                        to={`/article/${related.id}`}
+                        className="block hover:opacity-90 transition-opacity"
+                      >
+                        <h3 className="font-semibold text-lg text-black dark:text-white mb-2 hover:text-blue-600 dark:hover:text-blue-400">
+                          {related.title}
+                        </h3>
+                        <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-500">
+                          <time dateTime={related.created_at}>
+                            {new Date(related.created_at).toLocaleDateString('en-US', { 
+                              year: 'numeric', 
+                              month: 'long', 
+                              day: 'numeric'
+                            })}
+                          </time>
+                          {related.similarity && (
+                            <>
+                              <span className="text-gray-300 dark:text-gray-700">•</span>
+                              <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded text-xs">
+                                {(related.similarity * 100).toFixed(0)}% similar
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Sources */}
+            {article.sources && article.sources.length > 0 && (
+              <div className="mt-16 pt-8 border-t-2 border-gray-200 dark:border-gray-800">
+                <h2 className="text-3xl font-bold mb-6 text-black dark:text-white">Sources</h2>
+                <div className="bg-gray-50 dark:bg-gray-900 p-6 rounded-lg border border-gray-200 dark:border-gray-800">
+                  <ul className="space-y-3">
+                    {article.sources.map((source, index) => (
+                      <li key={`source-${index}-${source.url}`} className="flex items-start gap-3">
+                        <span className="text-gray-400 dark:text-gray-600 mt-1">•</span>
+                        <div className="flex-1">
+                          <span className="font-semibold text-gray-700 dark:text-gray-300">{source.name}</span>
+                          <a
+                            href={source.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block text-blue-600 dark:text-blue-400 hover:underline text-sm mt-1 break-all"
+                          >
+                            {source.url}
+                          </a>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
             )}
           </article>

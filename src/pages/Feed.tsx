@@ -1,11 +1,13 @@
 import { Link } from "react-router-dom"
 import { useState, useEffect } from "react"
+import { api } from "../lib/api"
 
 interface ArticleData {
   id?: string
   title: string
   content: string
   sources: Array<{ name: string; url: string }>
+  images?: string[]
   created_at?: string
 }
 
@@ -19,7 +21,7 @@ export function Feed() {
       try {
         setLoading(true)
         setError(null)
-        const response = await fetch('http://localhost:5000/api/articles')
+        const response = await fetch(api.getArticles())
         const data = await response.json()
         
         if (data.success && data.articles) {
@@ -163,11 +165,29 @@ export function Feed() {
                       </svg>
                     </Link>
                   </div>
-                  <div className="aspect-video w-full flex-shrink-0 rounded-lg bg-gray-100 dark:bg-gray-900 sm:w-64 flex items-center justify-center">
-                    <svg className="h-16 w-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
-                    </svg>
-                  </div>
+                  {article.images && article.images.length > 0 ? (
+                    <div className="aspect-video w-full flex-shrink-0 rounded-lg overflow-hidden sm:w-64">
+                      <img
+                        src={article.images[0]}
+                        alt={article.title}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // Fallback to placeholder if image fails to load
+                          const target = e.target as HTMLImageElement
+                          target.style.display = 'none'
+                          if (target.parentElement) {
+                            target.parentElement.className = 'aspect-video w-full flex-shrink-0 rounded-lg bg-gray-100 dark:bg-gray-900 sm:w-64 flex items-center justify-center'
+                          }
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="aspect-video w-full flex-shrink-0 rounded-lg bg-gray-100 dark:bg-gray-900 sm:w-64 flex items-center justify-center">
+                      <svg className="h-16 w-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+                      </svg>
+                    </div>
+                  )}
                 </div>
                 {article.sources && article.sources.length > 0 && (
                   <div className="border-t border-gray-200 dark:border-gray-800 px-4 py-2">
