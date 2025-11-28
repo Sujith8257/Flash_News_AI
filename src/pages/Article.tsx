@@ -153,14 +153,14 @@ export function Article() {
               </div>
             )}
 
-            {/* Article Header */}
-            <header className="mb-8 pb-6 border-b border-gray-200 dark:border-gray-800">
-              <h1 className="text-5xl font-bold mb-4 text-black dark:text-white leading-tight">
+            {/* Article Header with Title */}
+            <header className="mb-10 pb-8 border-b-2 border-gray-200 dark:border-gray-800">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold mb-6 text-black dark:text-white leading-tight tracking-tight">
                 {article.title}
               </h1>
               {article.created_at && (
-                <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-500">
-                  <time dateTime={article.created_at}>
+                <div className="flex items-center gap-4 text-base text-gray-600 dark:text-gray-400">
+                  <time dateTime={article.created_at} className="font-medium">
                     {new Date(article.created_at).toLocaleDateString('en-US', { 
                       year: 'numeric', 
                       month: 'long', 
@@ -170,7 +170,7 @@ export function Article() {
                     })}
                   </time>
                   <span className="text-gray-300 dark:text-gray-700">•</span>
-                  <span>Flash News AI</span>
+                  <span className="font-semibold text-gray-700 dark:text-gray-300">Flash News AI</span>
                 </div>
               )}
             </header>

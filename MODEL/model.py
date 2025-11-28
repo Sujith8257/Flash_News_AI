@@ -467,28 +467,28 @@ write_task = Task(
     description="""
     Using the verified event information from the fact-checker, create a comprehensive Flash News article.
     
+    CRITICAL: The article MUST start with a clear, engaging headline/title on the FIRST LINE.
+    The title should:
+    - Be 10-100 characters long
+    - Capture the essence of the top 5 global events being covered
+    - Be informative, attention-grabbing, and newsworthy
+    - NOT end with a period, exclamation mark, or question mark
+    - Be on its own line at the very beginning, before any article content
+    
     The article should:
-    1. Have an engaging headline
+    1. Start with an engaging headline/title on the first line
     2. Be written in a lively, energetic tone
     3. Cover all verified events in a cohesive narrative
     4. Be well-structured with clear paragraphs
     5. Include relevant details and context
+    6. Be comprehensive (500-1500 words)
     
     CRITICAL FORMATTING REQUIREMENT:
-    At the bottom of the article, include a "Sources" section with:
-    - Source name
-    - Source URL
-    - Format: "Source: [Source Name] - [URL]"
-    - List all sources used, one per line
+    Format the article as follows:
     
-    Also include an "Images" section with:
-    - Image URLs from the original news sources
-    - Format: "Image: [URL]" or "Images: [URL1], [URL2], ..."
-    - Only include original news images, NOT AI-generated images
+    [Title/Headline on first line - 10-100 characters, no punctuation at end]
     
-    Example format:
-    ---
-    [Article content here]
+    [Article content here - multiple paragraphs]
     
     Images:
     Image: https://example.com/image1.jpg
@@ -498,17 +498,28 @@ write_task = Task(
     Source: BBC News - https://www.bbc.com/news/article1
     Source: Reuters - https://www.reuters.com/article2
     Source: The Guardian - https://www.theguardian.com/article3
-    ---
+    
+    Example:
+    Global Markets Surge as Tech Giants Announce Breakthrough AI Developments
+    
+    In a stunning turn of events, major technology companies have unveiled...
+    [rest of article content]
+    
+    Images:
+    Image: https://example.com/image1.jpg
+    
+    Sources:
+    Source: BBC News - https://www.bbc.com/news/article1
     """,
     expected_output="""
     A well-formatted Flash News article with:
-    - Engaging headline
+    - Clear, engaging headline/title on the FIRST LINE (10-100 characters, no ending punctuation)
     - Comprehensive article content (500-1500 words)
     - Lively, energetic writing style
     - Proper paragraph structure
     - Images section with image URLs from news sources
     - Sources section at the bottom with source names and URLs
-    Format: "Image: [URL]" for images and "Source: [Name] - [URL]" for sources
+    Format: Title on first line, then content, then "Image: [URL]" for images and "Source: [Name] - [URL]" for sources
     """,
     agent=copywriter,
     async_execution=False  # ensure it runs after validation completes

@@ -269,12 +269,55 @@ def parse_article(result_text):
     
     print(f"📸 Extracted {len(images)} image URL(s) from article")
     
-    # Extract title
-    title = "Flash News: Top Global Events"
-    if '\n' in article_text:
-        first_line = article_text.split('\n')[0]
-        if len(first_line) < 100 and first_line.strip():
-            title = first_line.strip()
+    # Extract title - try multiple methods
+    title = "Flash News: Top Global Events"  # Default fallback
+    
+    # Method 1: Look for markdown-style headings (# Title)
+    heading_match = re.search(r'^#+\s+(.+)$', article_text, re.MULTILINE)
+    if heading_match:
+        potential_title = heading_match.group(1).strip()
+        if 10 <= len(potential_title) <= 150:  # Reasonable title length
+            title = potential_title
+    
+    # Method 2: Check first line if it looks like a title
+    if title == "Flash News: Top Global Events" and '\n' in article_text:
+        first_line = article_text.split('\n')[0].strip()
+        # Remove common prefixes and clean up
+        first_line = re.sub(r'^(Breaking News|News|Flash News|Update):\s*', '', first_line, flags=re.IGNORECASE)
+        first_line = re.sub(r'^#+\s*', '', first_line).strip()
+        
+        # Check if first line looks like a title (not too long, not a full sentence)
+        if 10 <= len(first_line) <= 150 and not first_line.endswith('.') and not first_line.endswith('!'):
+            title = first_line
+    
+    # Method 3: Look for title patterns in the text
+    if title == "Flash News: Top Global Events":
+        # Look for lines that might be titles (short, capitalized, at the start)
+        lines = article_text.split('\n')[:5]  # Check first 5 lines
+        for line in lines:
+            line = line.strip()
+            # Check if line looks like a title
+            if (10 <= len(line) <= 150 and 
+                not line.endswith('.') and 
+                not line.endswith(',') and
+                not line.startswith('http') and
+                line[0].isupper() if line else False):
+                # Additional check: not too many lowercase words (titles are usually shorter phrases)
+                words = line.split()
+                if len(words) <= 15:  # Titles are usually 15 words or less
+                    title = line
+                    break
+    
+    # Clean up title - remove markdown, extra formatting
+    title = re.sub(r'^#+\s*', '', title).strip()
+    title = re.sub(r'\*+', '', title).strip()
+    title = re.sub(r'^["\']|["\']$', '', title).strip()  # Remove quotes
+    
+    # Ensure title is not empty
+    if not title or len(title) < 5:
+        title = "Flash News: Top Global Events"
+    
+    print(f"📰 Extracted article title: {title}")
     
     # Extract content - remove Images and Sources sections
     content = article_text
