@@ -20,10 +20,6 @@ export function About() {
             <div className="mt-12">
               <h2 className="text-2xl font-bold mb-4">Developers</h2>
               <ul className="list-disc pl-6 space-y-2">
-                <li>TANGUTURI VENKATA SUJITH GOPI</li>
-                <li>DAGGUPATI SATHWIK CHOWDARY</li>
-                <li>GANIPINENI BHARDWAJ NAIDU</li>
-                <li>BIREDDY GOWTHAM</li>
               </ul>
             </div>
 

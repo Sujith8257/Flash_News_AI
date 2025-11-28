@@ -27,3 +27,8 @@ dist-ssr
 .env
 .env.local
 .env.production
+
+# Generated articles
+MODEL/articles/
+MODEL/articles.json
+MODEL/latest_article.json

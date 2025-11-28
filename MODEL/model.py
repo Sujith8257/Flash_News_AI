@@ -243,8 +243,8 @@ fact_checker = Agent(
 
 copywriter = Agent(
     role="Copywriter",
-    goal="Produce a short Flash News brief in a lively tone",
-    backstory="Seasoned writer specializing in concise news summaries.",
+    goal="Produce a comprehensive Flash News article in a lively, engaging tone with proper formatting including sources at the bottom",
+    backstory="Seasoned writer specializing in concise news summaries and engaging articles. You excel at creating well-structured articles that inform and captivate readers while maintaining journalistic integrity.",
     llm=shared_llm,
 )
 
@@ -342,8 +342,42 @@ validate_task = Task(
 )
 
 write_task = Task(
-    description="Draft a 150-word Flash News article combining the verified items.",
-    expected_output="One cohesive ~150-word Flash News article written in an energetic tone.",
+    description="""
+    Using the verified event information from the fact-checker, create a comprehensive Flash News article.
+    
+    The article should:
+    1. Have an engaging headline
+    2. Be written in a lively, energetic tone
+    3. Cover all verified events in a cohesive narrative
+    4. Be well-structured with clear paragraphs
+    5. Include relevant details and context
+    
+    CRITICAL FORMATTING REQUIREMENT:
+    At the bottom of the article, include a "Sources" section with:
+    - Source name
+    - Source URL
+    - Format: "Source: [Source Name] - [URL]"
+    - List all sources used, one per line
+    
+    Example format:
+    ---
+    [Article content here]
+    
+    Sources:
+    Source: BBC News - https://www.bbc.com/news/article1
+    Source: Reuters - https://www.reuters.com/article2
+    Source: The Guardian - https://www.theguardian.com/article3
+    ---
+    """,
+    expected_output="""
+    A well-formatted Flash News article with:
+    - Engaging headline
+    - Comprehensive article content (500-1500 words)
+    - Lively, energetic writing style
+    - Proper paragraph structure
+    - Sources section at the bottom with source names and URLs
+    Format: "Source: [Name] - [URL]" for each source
+    """,
     agent=copywriter,
     async_execution=False  # ensure it runs after validation completes
 )
@@ -354,5 +388,50 @@ crew = Crew(
     tasks=[research_task, validate_task, write_task],
 )
 
-result = crew.kickoff()
-print(result)
+# Only run if executed directly (not when imported)
+if __name__ == "__main__":
+    result = crew.kickoff()
+    print(result)
+    
+    # Save result to file for API access
+    try:
+        article_text = str(result)
+        sources = []
+        
+        # Extract sources if present
+        if "Sources:" in article_text:
+            sources_section = article_text.split("Sources:")[-1]
+            for line in sources_section.split('\n'):
+                line = line.strip()
+                if line and ('http' in line or 'www.' in line):
+                    if ' - ' in line:
+                        parts = line.split(' - ', 1)
+                        source_name = parts[0].replace('Source:', '').strip()
+                        source_url = parts[1].strip()
+                        sources.append({"name": source_name, "url": source_url})
+        
+        # Extract title
+        title = "Flash News: Top Global Events"
+        if '\n' in article_text:
+            first_line = article_text.split('\n')[0]
+            if len(first_line) < 100 and first_line.strip():
+                title = first_line.strip()
+        
+        # Extract content
+        content = article_text
+        if "Sources:" in content:
+            content = content.split("Sources:")[0].strip()
+        
+        article_data = {
+            "title": title,
+            "content": content,
+            "sources": sources,
+            "full_text": article_text
+        }
+        
+        with open('latest_article.json', 'w', encoding='utf-8') as f:
+            json.dump(article_data, f, indent=2, ensure_ascii=False)
+        
+        print("\nArticle saved to latest_article.json")
+    except Exception as e:
+        print(f"Error saving article: {e}")

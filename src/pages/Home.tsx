@@ -9,14 +9,7 @@ export function Home() {
     <div className="flex flex-col min-h-screen">
       <Header />
       <main className="flex-grow">
-        <section className="relative py-24 md:py-40 flex items-center justify-center text-center text-white overflow-hidden">
-          <div
-            className="absolute inset-0 w-full h-full bg-cover bg-center"
-            style={{
-              backgroundImage:
-                'linear-gradient(rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.6) 100%), url("https://lh3.googleusercontent.com/aida-public/AB6AXuCU635QxjVh2sfU0zK1nnM2mxKUK9Me_sLfIvn_VnX9GQ91WhDPJ_RrryWnf9bfiLgJ_MRyC5lBvpFmz6eczyS376zHbOTHKbMQq-zaeo19J7F5VnxhiSkqz5fcW1NXkhupOKEqRsPKIqRIN89v4xg8NHYAeQsqP-WXMT-QHTfKgRjLpH9_ZC-fDVBblh9SyH5dvCGiGBjIP0_-Z3p4xDAD3XlSbNRRhrV9oVOXjl4AYAwEgN814g8Smofwva7h52m_vQK0MyrOiKY")',
-            }}
-          ></div>
+        <section className="relative py-24 md:py-40 flex items-center justify-center text-center text-white overflow-hidden bg-gradient-to-b from-gray-900 to-black">
           <div className="relative z-10 container mx-auto px-4">
             <h1 className="text-5xl md:text-7xl font-extrabold mb-4">Flash News AI</h1>
             <p className="text-xl md:text-2xl max-w-3xl mx-auto mb-8 text-gray-300">
@@ -24,7 +17,7 @@ export function Home() {
               matters to you, and keep you up to speed with instant updates.
             </p>
             <Button size="lg" asChild>
-              <Link to="/signup">Get Started</Link>
+              <Link to="/feed">Get Started</Link>
             </Button>
           </div>
         </section>
@@ -113,10 +106,10 @@ export function Home() {
               Start reading in seconds
             </h2>
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
-              Sign in to see your personalized feed and AI summaries—no setup required.
+              See your personalized feed and AI summaries—no setup required.
             </p>
             <Button size="lg" asChild>
-              <Link to="/signin">Go to Sign In</Link>
+              <Link to="/feed">View Feed</Link>
             </Button>
           </div>
         </section>
@@ -160,27 +153,11 @@ export function Home() {
             <div className="max-w-5xl mx-auto">
               <h3 className="text-2xl font-bold mb-6 text-center">Developers</h3>
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[
-                  { initials: "TG", name: "TANGUTURI VENKATA SUJITH GOPI" },
-                  { initials: "DS", name: "DAGGUPATI SATHWIK CHOWDARY" },
-                  { initials: "GB", name: "GANIPINENI BHARDWAJ NAIDU" },
-                  { initials: "BG", name: "BIREDDY GOWTHAM" },
-                ].map((dev) => (
-                  <Card key={dev.initials} className="text-center">
-                    <CardContent className="pt-6">
-                      <div className="mx-auto mb-4 h-14 w-14 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xl font-bold">
-                        {dev.initials}
-                      </div>
-                      <p className="font-semibold">{dev.name}</p>
-                      <p className="text-sm text-muted-foreground">Developer</p>
-                    </CardContent>
-                  </Card>
-                ))}
               </div>
             </div>
             <div className="mt-12 text-center">
               <Button size="lg" asChild>
-                <Link to="/signup">Join the Feed</Link>
+                <Link to="/feed">View Feed</Link>
               </Button>
             </div>
           </div>
