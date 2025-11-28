@@ -391,8 +391,10 @@ research_task = Task(
     - Source URLs (multiple sources per event for verification)
     - Original images from the news sources (image URLs from articles, NOT AI-generated)
       * Extract image URLs from the news data (urlToImage, image_url, image fields)
+      * CRITICAL: You MUST include at least ONE image URL for each of the top 5 events
       * Include images in the output with clear labels like "Image: [URL]" or "Images: [URL1, URL2]"
       * Only include original news images, never AI-generated images
+      * If an event has no image in the source data, try to find a related image from other sources covering the same event
     - Publication dates and timestamps
     - Author information if available
     - Source names and credibility indicators
@@ -483,6 +485,14 @@ write_task = Task(
     5. Include relevant details and context
     6. Be comprehensive (500-1500 words)
     
+    CRITICAL REQUIREMENT - IMAGES:
+    You MUST include at least ONE image URL in the Images section. 
+    - Extract image URLs from the news sources provided by the researcher
+    - Include at least 1-3 relevant images from the original news articles
+    - Images should be from credible news sources (BBC, Reuters, CNN, etc.)
+    - DO NOT create fake or placeholder image URLs
+    - If you cannot find images, use image URLs from the source articles provided
+    
     CRITICAL FORMATTING REQUIREMENT:
     Format the article as follows:
     
@@ -493,6 +503,7 @@ write_task = Task(
     Images:
     Image: https://example.com/image1.jpg
     Image: https://example.com/image2.jpg
+    (MUST include at least one image URL)
     
     Sources:
     Source: BBC News - https://www.bbc.com/news/article1
@@ -517,9 +528,9 @@ write_task = Task(
     - Comprehensive article content (500-1500 words)
     - Lively, energetic writing style
     - Proper paragraph structure
-    - Images section with image URLs from news sources
+    - Images section with AT LEAST ONE image URL from news sources (REQUIRED - must include at least 1 image)
     - Sources section at the bottom with source names and URLs
-    Format: Title on first line, then content, then "Image: [URL]" for images and "Source: [Name] - [URL]" for sources
+    Format: Title on first line, then content, then "Image: [URL]" for images (minimum 1 image required) and "Source: [Name] - [URL]" for sources
     """,
     agent=copywriter,
     async_execution=False  # ensure it runs after validation completes

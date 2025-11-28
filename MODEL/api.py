@@ -87,7 +87,30 @@ def save_article(article):
             for idx, img_url in enumerate(article_images[:5], 1):  # Show first 5
                 print(f"   {idx}. {img_url[:100]}")
         else:
-            print("⚠️  No images found in article data")
+            print("⚠️  WARNING: No images found in article data!")
+            print("⚠️  Attempting to extract images from full_text as fallback...")
+            
+            # Try to extract from full_text as last resort
+            if article.get('full_text'):
+                import re
+                full_text = article.get('full_text', '')
+                img_patterns = [
+                    r'https?://[^\s<>"\)]+\.(?:jpg|jpeg|png|gif|webp|svg|bmp)(?:\?[^\s<>"\)]*)?',
+                    r'https?://[^\s<>"\)]+image[^\s<>"\)]*(?:\.(?:jpg|jpeg|png|gif|webp))?',
+                ]
+                for pattern in img_patterns:
+                    matches = re.findall(pattern, full_text, re.IGNORECASE)
+                    for match in matches:
+                        if isinstance(match, str) and match.startswith('http'):
+                            article_images.append(match)
+                            print(f"✅ Found image in full_text: {match[:80]}...")
+                            break
+                    if article_images:
+                        break
+            
+            if not article_images:
+                print("❌ ERROR: Article has no images after all extraction attempts!")
+                print("⚠️  Article will be saved, but it should have at least one image.")
         
         # Prepare data for Supabase (JSONB columns accept Python lists/dicts directly)
         supabase_data = {
@@ -426,12 +449,53 @@ def generate_article_task():
             print(f"[{datetime.now()}] No similar articles found - this is a new topic")
             article_data["related_articles"] = []
         
-        # Log image count before saving
+        # Ensure at least one image is present
         image_count = len(article_data.get('images', []))
         print(f"[{datetime.now()}] 📸 Article contains {image_count} image(s)")
+        
+        if image_count == 0:
+            print(f"[{datetime.now()}] ⚠️  WARNING: No images found in article!")
+            print(f"[{datetime.now()}] 🔍 Attempting to extract images from sources...")
+            
+            # Try to extract images from sources if available
+            sources = article_data.get('sources', [])
+            for source in sources:
+                source_url = source.get('url', '')
+                # Try to find image URLs in source URLs (some sources have image endpoints)
+                if source_url and any(domain in source_url.lower() for domain in ['bbc', 'reuters', 'cnn', 'guardian', 'nytimes']):
+                    # These news sites often have image CDNs - try to construct image URL
+                    # This is a fallback - ideally images should come from the article content
+                    pass
+            
+            # If still no images, try to extract from full_text
+            if image_count == 0 and article_data.get('full_text'):
+                import re
+                full_text = article_data.get('full_text', '')
+                # Look for any image URLs in full_text
+                img_patterns = [
+                    r'https?://[^\s<>"\)]+\.(?:jpg|jpeg|png|gif|webp|svg|bmp)(?:\?[^\s<>"\)]*)?',
+                    r'https?://[^\s<>"\)]+image[^\s<>"\)]*(?:\.(?:jpg|jpeg|png|gif|webp))?',
+                ]
+                for pattern in img_patterns:
+                    matches = re.findall(pattern, full_text, re.IGNORECASE)
+                    for match in matches:
+                        if isinstance(match, str) and match.startswith('http'):
+                            if 'images' not in article_data:
+                                article_data['images'] = []
+                            if match not in article_data['images']:
+                                article_data['images'].append(match)
+                                image_count += 1
+                                print(f"[{datetime.now()}] ✅ Found image in full_text: {match[:80]}...")
+                                break
+                    if image_count > 0:
+                        break
+        
         if image_count > 0:
             for idx, img_url in enumerate(article_data.get('images', [])[:3], 1):
                 print(f"[{datetime.now()}]   Image {idx}: {img_url[:80]}...")
+        else:
+            print(f"[{datetime.now()}] ❌ ERROR: Article has no images! This should not happen.")
+            print(f"[{datetime.now()}] ⚠️  Article will be saved without images, but this is not ideal.")
         
         # Save article to Supabase
         if save_article(article_data):
