@@ -1,8 +1,4 @@
 import { Link } from "react-router-dom"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Search, FavoriteBorder, ChatBubbleOutline, ArrowForward } from "lucide-react"
-import { Input } from "@/components/ui/input"
 
 const newsItems = [
   {
@@ -54,8 +50,8 @@ const newsItems = [
 
 export function Feed() {
   return (
-    <div className="flex min-h-screen w-full flex-col">
-      <header className="flex items-center justify-between border-b px-4 sm:px-6 lg:px-8 py-3">
+    <div className="flex min-h-screen w-full flex-col bg-white dark:bg-black text-black dark:text-white">
+      <header className="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 px-4 sm:px-6 lg:px-8 py-3">
         <div className="flex items-center gap-4">
           <Link to="/feed">
             <img src="/logo1.png" alt="Flash News AI logo" className="h-12 w-12 object-contain" />
@@ -66,9 +62,22 @@ export function Feed() {
         </div>
         <div className="flex items-center gap-4">
           <div className="relative hidden sm:block">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input
-              className="w-full rounded-full pl-10 pr-4"
+            <svg
+              className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500 dark:text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+            <input
+              type="text"
+              className="w-full rounded-full border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 py-2 pl-10 pr-4 text-base focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
               placeholder="Search"
             />
           </div>
@@ -86,36 +95,73 @@ export function Feed() {
           <h2 className="px-4 text-3xl font-bold">News Feed</h2>
           <div className="mt-6 space-y-8">
             {newsItems.map((item, index) => (
-              <Card key={index} className="border">
+              <div key={index} className="border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-black">
                 <div className="flex flex-col gap-4 p-4 sm:flex-row">
                   <div className="flex flex-1 flex-col gap-3">
                     <div className="space-y-1">
                       <p className="text-lg font-bold">{item.title}</p>
-                      <p className="text-sm text-muted-foreground">{item.description}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">{item.description}</p>
                     </div>
-                    <Button asChild className="w-fit">
-                      <Link to="/article">
-                        <span>Read More</span>
-                        <ArrowForward className="ml-2 h-4 w-4" />
-                      </Link>
-                    </Button>
+                    <Link
+                      to="/article"
+                      className="inline-flex items-center justify-center gap-2 w-fit px-4 py-2 text-sm font-medium text-white bg-black dark:bg-white dark:text-black rounded-full hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors"
+                    >
+                      <span>Read More</span>
+                      <svg
+                        className="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 5l7 7-7 7"
+                        />
+                      </svg>
+                    </Link>
                   </div>
                   <div
                     className="aspect-video w-full flex-shrink-0 rounded-lg bg-cover bg-center sm:w-64"
                     style={{ backgroundImage: `url("${item.image}")` }}
                   ></div>
                 </div>
-                <div className="flex items-center gap-4 border-t px-4 py-2">
-                  <Button variant="ghost" size="sm" className="gap-2">
-                    <FavoriteBorder className="h-5 w-5" />
+                <div className="flex items-center gap-4 border-t border-gray-200 dark:border-gray-800 px-4 py-2">
+                  <button className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors">
+                    <svg
+                      className="h-5 w-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                      />
+                    </svg>
                     <span className="font-semibold">{item.likes}</span>
-                  </Button>
-                  <Button variant="ghost" size="sm" className="gap-2">
-                    <ChatBubbleOutline className="h-5 w-5" />
+                  </button>
+                  <button className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors">
+                    <svg
+                      className="h-5 w-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                      />
+                    </svg>
                     <span className="font-semibold">{item.comments}</span>
-                  </Button>
+                  </button>
                 </div>
-              </Card>
+              </div>
             ))}
           </div>
         </div>
@@ -123,4 +169,3 @@ export function Feed() {
     </div>
   )
 }
-

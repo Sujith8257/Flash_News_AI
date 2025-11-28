@@ -8,7 +8,6 @@ A modern React application built with shadcn/ui components and a black & white t
 - shadcn/ui components
 - Tailwind CSS with black & white theme
 - React Router for navigation
-- Supabase integration for authentication
 
 ## Getting Started
 
@@ -23,17 +22,12 @@ A modern React application built with shadcn/ui components and a black & white t
 npm install
 ```
 
-2. Create a `.env` file in the root directory:
-```
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key_here
-```
-
-3. Start the development server:
+2. Start the development server:
 ```bash
 npm run dev
 ```
 
-4. Build for production:
+3. Build for production:
 ```bash
 npm run build
 ```
@@ -73,5 +67,4 @@ The application uses a black and white color scheme:
 - Tailwind CSS
 - shadcn/ui
 - React Router
-- Supabase
 

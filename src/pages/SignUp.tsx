@@ -6,12 +6,6 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Header } from "@/components/Header"
 import { Footer } from "@/components/Footer"
-import { createClient } from "@supabase/supabase-js"
-
-const SUPABASE_URL = "https://hznixdhsddcufaogcuyz.supabase.co"
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "<PUT_YOUR_SUPABASE_ANON_KEY_HERE>"
-
-const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 export function SignUp() {
   const navigate = useNavigate()
@@ -22,7 +16,7 @@ export function SignUp() {
   const [terms, setTerms] = useState(false)
   const [error, setError] = useState("")
 
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
     setError("")
 
@@ -39,31 +33,8 @@ export function SignUp() {
       return
     }
 
-    try {
-      const { data, error } = await supabaseClient.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { full_name: name },
-        },
-      })
-
-      if (error) {
-        setError(error.message)
-        return
-      }
-
-      if (data?.user && !data?.session) {
-        alert("Check your email to confirm your account.")
-        navigate("/signin")
-        return
-      }
-
-      navigate("/feed")
-    } catch (err) {
-      setError("Something went wrong. Please try again.")
-      console.error(err)
-    }
+    // Simple form validation - navigate to feed
+    navigate("/feed")
   }
 
   return (
