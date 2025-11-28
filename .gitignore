@@ -40,3 +40,12 @@ MODEL/latest_article.json
 MODEL/.env
 MODEL/.env.local
 MODEL/.env.production
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+MODEL/__pycache__/
+MODEL/**/__pycache__/
