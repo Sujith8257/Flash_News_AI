@@ -1,18 +1,10 @@
 import { Link } from "react-router-dom"
 import { useState, useEffect } from "react"
+import { fetchArticlesFromSupabase, isSupabaseConfigured, type Article } from "../lib/supabase"
 import { api } from "../lib/api"
 
-interface ArticleData {
-  id?: string
-  title: string
-  content: string
-  sources: Array<{ name: string; url: string }>
-  images?: string[]
-  created_at?: string
-}
-
 export function Feed() {
-  const [articles, setArticles] = useState<ArticleData[]>([])
+  const [articles, setArticles] = useState<Article[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -21,17 +13,51 @@ export function Feed() {
       try {
         setLoading(true)
         setError(null)
-        const response = await fetch(api.getArticles())
-        const data = await response.json()
         
-        if (data.success && data.articles) {
-          setArticles(data.articles)
+        // Try Supabase first if configured
+        if (isSupabaseConfigured()) {
+          try {
+            const supabaseArticles = await fetchArticlesFromSupabase()
+            setArticles(supabaseArticles)
+            if (supabaseArticles.length === 0) {
+              setError("No articles found yet.")
+            }
+          } catch (supabaseError) {
+            console.error("Supabase fetch failed, trying backend API:", supabaseError)
+            // Fallback to backend API
+            throw supabaseError
+          }
         } else {
-          setError("No articles found yet.")
+          // Fallback to backend API if Supabase not configured
+          const response = await fetch(api.getArticles())
+          const data = await response.json()
+          
+          if (data.success && data.articles) {
+            setArticles(data.articles)
+          } else {
+            setError("No articles found yet.")
+          }
         }
       } catch (err) {
-        setError("Failed to fetch articles. Make sure the API server is running.")
-        console.error(err)
+        // If Supabase failed, try backend API as fallback
+        if (isSupabaseConfigured()) {
+          try {
+            const response = await fetch(api.getArticles())
+            const data = await response.json()
+            
+            if (data.success && data.articles) {
+              setArticles(data.articles)
+            } else {
+              setError("No articles found yet.")
+            }
+          } catch (apiError) {
+            setError("Failed to fetch articles from both Supabase and API server.")
+            console.error(apiError)
+          }
+        } else {
+          setError("Failed to fetch articles. Make sure the API server is running.")
+          console.error(err)
+        }
       } finally {
         setLoading(false)
       }

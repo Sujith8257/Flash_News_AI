@@ -13,6 +13,27 @@ app = Flask(__name__)
 frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:5173')
 CORS(app, origins=[frontend_url, 'http://localhost:5173', 'http://localhost:3000'])
 
+# Supabase Configuration
+SUPABASE_URL = os.getenv('SUPABASE_URL')
+SUPABASE_KEY = os.getenv('SUPABASE_KEY')
+SUPABASE_ENABLED = os.getenv('SUPABASE_STORAGE_ENABLED', 'false').lower() == 'true'
+
+# Initialize Supabase client if configured
+supabase_client = None
+if SUPABASE_ENABLED and SUPABASE_URL and SUPABASE_KEY:
+    try:
+        from supabase import create_client, Client
+        supabase_client: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+        print("✅ Supabase client initialized successfully")
+    except ImportError:
+        print("⚠️  Supabase package not installed. Install with: pip install supabase")
+        SUPABASE_ENABLED = False
+    except Exception as e:
+        print(f"⚠️  Error initializing Supabase: {e}")
+        SUPABASE_ENABLED = False
+else:
+    print("ℹ️  Supabase storage disabled (using file storage)")
+
 # Articles Storage Configuration
 # All articles are stored in the 'articles' folder as individual JSON files
 # Each article is saved with its ID as the filename (e.g., 20241215143025.json)
@@ -35,10 +56,36 @@ def ensure_articles_dir():
 ensure_articles_dir()
 
 def load_articles():
-    """Load all articles from folder"""
+    """Load all articles from Supabase (if enabled) or file storage"""
     articles = []
     
-    # Ensure directory exists
+    # Try Supabase first if enabled
+    if SUPABASE_ENABLED and supabase_client:
+        try:
+            response = supabase_client.table('articles').select('*').order('created_at', desc=True).execute()
+            if response.data:
+                for row in response.data:
+                    # Convert Supabase row to article format
+                    article = {
+                        'id': row.get('id'),
+                        'title': row.get('title'),
+                        'content': row.get('content'),
+                        'full_text': row.get('full_text', ''),
+                        'created_at': row.get('created_at'),
+                        'sources': row.get('sources', []),
+                        'images': row.get('images', []),
+                        'topics': row.get('topics', []),
+                        'related_articles': row.get('related_articles', [])
+                    }
+                    if article.get('id') and article.get('title'):
+                        articles.append(article)
+                print(f"✅ Loaded {len(articles)} articles from Supabase")
+                return articles
+        except Exception as e:
+            print(f"⚠️  Error loading from Supabase, falling back to file storage: {e}")
+            # Fall through to file storage
+    
+    # Fallback to file storage
     ensure_articles_dir()
     
     if not os.path.exists(ARTICLES_DIR):
@@ -75,7 +122,7 @@ def load_articles():
         # Sort by created_at timestamp (newest first)
         articles.sort(key=lambda x: x.get('created_at', ''), reverse=True)
         
-        print(f"Loaded {len(articles)} articles from {ARTICLES_DIR}")
+        print(f"📁 Loaded {len(articles)} articles from file storage")
         
     except Exception as e:
         print(f"Error loading articles: {e}")
@@ -85,15 +132,51 @@ def load_articles():
     return articles
 
 def save_article(article):
-    """Save a single article to a file in the articles folder"""
+    """Save a single article to Supabase (if enabled) and/or file storage"""
+    article_id = article.get('id', datetime.now().strftime("%Y%m%d%H%M%S"))
+    if not article_id:
+        article_id = datetime.now().strftime("%Y%m%d%H%M%S")
+        article['id'] = article_id
+    
+    # Ensure created_at is set
+    if not article.get('created_at'):
+        article['created_at'] = datetime.now().isoformat()
+    
+    success = False
+    
+    # Try Supabase first if enabled
+    if SUPABASE_ENABLED and supabase_client:
+        try:
+            # Prepare data for Supabase (JSONB columns accept Python lists/dicts directly)
+            supabase_data = {
+                'id': article_id,
+                'title': article.get('title', ''),
+                'content': article.get('content', ''),
+                'full_text': article.get('full_text', article.get('content', '')),
+                'created_at': article.get('created_at'),
+                'sources': article.get('sources', []),  # JSONB accepts Python lists
+                'images': article.get('images', []),    # JSONB accepts Python lists
+                'topics': article.get('topics', []),    # JSONB accepts Python lists
+                'related_articles': article.get('related_articles', [])  # JSONB accepts Python lists
+            }
+            
+            # Use upsert to handle both insert and update
+            response = supabase_client.table('articles').upsert(supabase_data).execute()
+            
+            if response.data:
+                print(f"✅ Article saved to Supabase: {article_id}")
+                success = True
+            else:
+                print(f"⚠️  Supabase save returned no data")
+        except Exception as e:
+            print(f"⚠️  Error saving to Supabase: {e}")
+            import traceback
+            traceback.print_exc()
+            # Fall through to file storage
+    
+    # Always save to file storage as backup (or primary if Supabase disabled)
     try:
-        # Ensure directory exists before saving
         ensure_articles_dir()
-        
-        article_id = article.get('id', datetime.now().strftime("%Y%m%d%H%M%S"))
-        if not article_id:
-            article_id = datetime.now().strftime("%Y%m%d%H%M%S")
-            article['id'] = article_id
         
         filename = f"{article_id}.json"
         filepath = os.path.join(ARTICLES_DIR, filename)
@@ -109,8 +192,8 @@ def save_article(article):
                 os.remove(filepath)
             os.rename(temp_filepath, filepath)
             
-            print(f"Article saved successfully: {filename}")
-            return True
+            print(f"📁 Article saved to file: {filename}")
+            success = True
         except Exception as e:
             # Clean up temp file if rename failed
             if os.path.exists(temp_filepath):
@@ -118,13 +201,17 @@ def save_article(article):
                     os.remove(temp_filepath)
                 except:
                     pass
-            raise e
+            if not SUPABASE_ENABLED:
+                raise e  # Only raise if Supabase is disabled
         
     except Exception as e:
-        print(f"Error saving article: {e}")
+        print(f"❌ Error saving article to file: {e}")
         import traceback
         traceback.print_exc()
-        return False
+        if not success:  # Only return False if both methods failed
+            return False
+    
+    return success
 
 # Articles are NEVER deleted - all articles are permanently saved
 # This function is disabled - articles are never deleted

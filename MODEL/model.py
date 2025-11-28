@@ -17,8 +17,12 @@ if not gemini_api_key:
         "GEMINI_API_KEY missing. Add it to a .env file or the environment."
     )
 
+# Get model from environment or use default (gemini-2.0-flash-lite has better free tier limits: 30 RPM, 1M TPM)
+# You can override by setting GEMINI_MODEL in .env file
+gemini_model = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-lite")
+
 shared_llm = LLM(
-    model="gemini-2.0-flash",  # Using Gemini 2.0 Flash model
+    model=gemini_model,  # Default: gemini-2.0-flash-lite (30 RPM, 1M TPM free tier)
     api_key=gemini_api_key,
     temperature=0.7,
     timeout=120,
