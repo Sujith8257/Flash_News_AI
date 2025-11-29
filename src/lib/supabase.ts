@@ -26,6 +26,7 @@ export interface Article {
   id: string
   title: string
   content: string
+  content_preview?: string  // 4-5 line summary for preview
   full_text?: string
   created_at: string
   updated_at?: string

@@ -44,11 +44,18 @@ export function Feed() {
     return () => clearInterval(interval)
   }, [])
 
-  // Get first paragraph as description
-  const getDescription = (content: string) => {
-    if (!content) return "No description available"
-    const firstParagraph = content.split('\n\n')[0] || content.split('\n')[0]
-    return firstParagraph.length > 150 ? firstParagraph.substring(0, 150) + '...' : firstParagraph
+  // Get content preview (4-5 line summary) or fallback to first paragraph
+  const getContentPreview = (article: Article) => {
+    // Use content_preview if available (4-5 line summary)
+    if (article.content_preview) {
+      return article.content_preview
+    }
+    // Fallback: use first paragraph if content_preview not available
+    if (article.content) {
+      const firstParagraph = article.content.split('\n\n')[0] || article.content.split('\n')[0]
+      return firstParagraph.length > 200 ? firstParagraph.substring(0, 200) + '...' : firstParagraph
+    }
+    return "No preview available"
   }
 
   // Format date
@@ -139,8 +146,8 @@ export function Feed() {
                   <div className="flex flex-1 flex-col gap-3">
                     <div className="space-y-1">
                       <p className="text-lg font-bold">{article.title}</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {getDescription(article.content)}
+                      <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                        {getContentPreview(article)}
                       </p>
                       {article.created_at && (
                         <div className="flex flex-wrap items-center gap-3 mt-2">
