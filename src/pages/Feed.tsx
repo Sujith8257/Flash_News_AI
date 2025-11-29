@@ -24,7 +24,16 @@ export function Feed() {
         
         // Fetch articles directly from Supabase
         const supabaseArticles = await fetchArticlesFromSupabase()
-        setArticles(supabaseArticles)
+        
+        // Sort articles by created_at (newest first) as a safety measure
+        // This ensures new articles always appear at the top
+        const sortedArticles = [...supabaseArticles].sort((a, b) => {
+          const dateA = new Date(a.created_at || 0).getTime()
+          const dateB = new Date(b.created_at || 0).getTime()
+          return dateB - dateA // Descending order (newest first)
+        })
+        
+        setArticles(sortedArticles)
         
         if (supabaseArticles.length === 0) {
           setError("No articles found yet. Articles are generated automatically every 30 minutes.")
@@ -72,6 +81,19 @@ export function Feed() {
       })
     } catch {
       return ""
+    }
+  }
+
+  // Check if article is new (within last 24 hours)
+  const isNewArticle = (dateString?: string) => {
+    if (!dateString) return false
+    try {
+      const articleDate = new Date(dateString)
+      const now = new Date()
+      const hoursDiff = (now.getTime() - articleDate.getTime()) / (1000 * 60 * 60)
+      return hoursDiff <= 24
+    } catch {
+      return false
     }
   }
 
@@ -145,7 +167,14 @@ export function Feed() {
                 <div className="flex flex-col gap-4 p-4 sm:flex-row">
                   <div className="flex flex-1 flex-col gap-3">
                     <div className="space-y-1">
-                      <p className="text-lg font-bold">{article.title}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-lg font-bold">{article.title}</p>
+                        {isNewArticle(article.created_at) && (
+                          <span className="px-2 py-0.5 text-xs font-semibold bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full">
+                            NEW
+                          </span>
+                        )}
+                      </div>
                       <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
                         {getContentPreview(article)}
                       </p>
