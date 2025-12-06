@@ -4,7 +4,18 @@ WSGI entry point for production deployment with Gunicorn
 import os
 from threading import Thread
 from datetime import datetime
-from api import app, scheduler_worker, generate_article_task
+from api import app, scheduler_worker, generate_article_task, load_articles
+
+# Verify Supabase connection on startup
+print(f"[{datetime.now()}] 🔍 Verifying Supabase connection...")
+try:
+    existing_articles = load_articles()
+    print(f"[{datetime.now()}] ✅ Supabase connection verified. Found {len(existing_articles)} existing articles.")
+except Exception as e:
+    print(f"[{datetime.now()}] ⚠️  WARNING: Could not verify Supabase connection: {str(e)}")
+    print(f"[{datetime.now()}] ⚠️  This might indicate a configuration issue. Check SUPABASE_URL and SUPABASE_KEY environment variables.")
+    import traceback
+    traceback.print_exc()
 
 # Start background scheduler (runs once when module is imported)
 scheduler_thread = Thread(target=scheduler_worker, daemon=True)
