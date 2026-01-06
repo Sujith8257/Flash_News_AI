@@ -6,6 +6,10 @@ from datetime import datetime
 from threading import Thread
 import time
 from model import crew
+try:
+    from google.genai.errors import ClientError as GeminiClientError
+except Exception:
+    GeminiClientError = None
 
 app = Flask(__name__)
 
@@ -644,6 +648,15 @@ def parse_article(result_text):
         "full_text": article_text
     }
 
+def _is_gemini_quota_error(error: Exception) -> bool:
+    """Return True if the exception looks like a Gemini quota/429 error."""
+    message = str(error) if error else ""
+    return (
+        ("RESOURCE_EXHAUSTED" in message)
+        or ("quota" in message.lower())
+        or ("429" in message)
+    )
+
 def generate_article_task():
     """Background task to generate article"""
     try:
@@ -654,7 +667,19 @@ def generate_article_task():
         print(f"[{datetime.now()}] Checking {len(existing_articles)} existing articles for similar topics...")
         
         # Generate the article
-        result = crew.kickoff()
+        try:
+            result = crew.kickoff()
+        except Exception as kickoff_err:
+            if GeminiClientError and isinstance(kickoff_err, GeminiClientError):
+                if getattr(kickoff_err, "status_code", None) == 429 or _is_gemini_quota_error(kickoff_err):
+                    backoff_seconds = int(os.getenv("GEMINI_QUOTA_BACKOFF_SECONDS", "1800"))
+                    print(f"[{datetime.now()}] ❌ Gemini quota exhausted (429). Will retry after backoff: {backoff_seconds}s")
+                    return
+            if _is_gemini_quota_error(kickoff_err):
+                backoff_seconds = int(os.getenv("GEMINI_QUOTA_BACKOFF_SECONDS", "1800"))
+                print(f"[{datetime.now()}] ❌ Gemini quota exhausted. Will retry after backoff: {backoff_seconds}s")
+                return
+            raise
         article_data = parse_article(result)
         article_data["id"] = datetime.now().strftime("%Y%m%d%H%M%S")
         article_data["created_at"] = datetime.now().isoformat()
@@ -780,7 +805,7 @@ def scheduler_worker():
         
         # Wait 30 minutes (1800 seconds)
         print(f"[{datetime.now()}] Scheduler sleeping for 30 minutes (1800 seconds)...")
-        time.sleep(60)
+        time.sleep(1800)
 
 @app.route('/api/generate-article', methods=['POST'])
 def generate_article():
@@ -790,7 +815,23 @@ def generate_article():
         existing_articles = load_articles()
         
         # Generate the article
-        result = crew.kickoff()
+        try:
+            result = crew.kickoff()
+        except Exception as kickoff_err:
+            if GeminiClientError and isinstance(kickoff_err, GeminiClientError):
+                if getattr(kickoff_err, "status_code", None) == 429 or _is_gemini_quota_error(kickoff_err):
+                    return jsonify({
+                        "success": False,
+                        "error": "Gemini quota exhausted. Please add billing or try again later.",
+                        "code": 429
+                    }), 429
+            if _is_gemini_quota_error(kickoff_err):
+                return jsonify({
+                    "success": False,
+                    "error": "Gemini quota exhausted. Please add billing or try again later.",
+                    "code": 429
+                }), 429
+            raise
         article_data = parse_article(result)
         article_data["id"] = datetime.now().strftime("%Y%m%d%H%M%S")
         article_data["created_at"] = datetime.now().isoformat()
@@ -937,4 +978,3 @@ if __name__ == '__main__':
     debug = os.getenv('FLASK_ENV') != 'production'
     
     app.run(debug=debug, port=port, host='0.0.0.0')
-

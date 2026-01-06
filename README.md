@@ -530,7 +530,7 @@ The application uses a minimalist black & white color scheme:
 
 ## 📝 License
 
-This project is open source and available for use and modification.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
