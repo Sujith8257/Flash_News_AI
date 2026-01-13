@@ -99,3 +99,51 @@ export function isSupabaseConfigured(): boolean {
   return supabaseClient !== null && SUPABASE_URL !== '' && SUPABASE_ANON_KEY !== ''
 }
 
+// Get article count from Supabase
+export async function getArticleCount(): Promise<number> {
+  if (!supabaseClient) {
+    return 0
+  }
+
+  try {
+    const { count, error } = await supabaseClient
+      .from('articles')
+      .select('*', { count: 'exact', head: true })
+
+    if (error) {
+      console.error('Error getting article count:', error)
+      return 0
+    }
+
+    return count || 0
+  } catch (error) {
+    console.error('Error fetching article count:', error)
+    return 0
+  }
+}
+
+// Get recent articles (for featured section)
+export async function getRecentArticles(limit: number = 3): Promise<Article[]> {
+  if (!supabaseClient) {
+    return []
+  }
+
+  try {
+    const { data, error } = await supabaseClient
+      .from('articles')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+    if (error) {
+      console.error('Error fetching recent articles:', error)
+      return []
+    }
+
+    return (data || []) as Article[]
+  } catch (error) {
+    console.error('Error fetching recent articles:', error)
+    return []
+  }
+}
+
