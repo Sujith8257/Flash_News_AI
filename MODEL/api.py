@@ -2,14 +2,20 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 import json
 import os
+import re
 from datetime import datetime
 from threading import Thread
 import time
 from model import crew
-try:
-    from google.genai.errors import ClientError as GeminiClientError
-except Exception:
-    GeminiClientError = None
+
+# Groq rate limits (RPM, TPM, RPD, TPD) and response headers:
+# https://console.groq.com/docs/rate-limits — org-level; retry-after on 429; x-ratelimit-* often on every response.
+
+class LLMRateLimitError(Exception):
+    """Custom exception for LLM provider rate-limit/quota errors."""
+    def __init__(self, message, quota_info=None):
+        super().__init__(message)
+        self.quota_info = quota_info or {}
 
 app = Flask(__name__)
 
@@ -648,14 +654,212 @@ def parse_article(result_text):
         "full_text": article_text
     }
 
-def _is_gemini_quota_error(error: Exception) -> bool:
-    """Return True if the exception looks like a Gemini quota/429 error."""
-    message = str(error) if error else ""
-    return (
-        ("RESOURCE_EXHAUSTED" in message)
-        or ("quota" in message.lower())
-        or ("429" in message)
+def _parse_groq_duration_to_seconds(value: str) -> float | None:
+    """Parse Groq header durations like '7.66s' or '2m59.56s' (x-ratelimit-reset-*)."""
+    v = value.strip().lower()
+    m = re.match(r"^([\d.]+)s$", v)
+    if m:
+        return float(m.group(1))
+    m = re.match(r"^(\d+)m([\d.]+)s$", v)
+    if m:
+        return int(m.group(1)) * 60 + float(m.group(2))
+    m = re.match(r"^(\d+)m$", v)
+    if m:
+        return int(m.group(1)) * 60
+    return None
+
+
+def _groq_ratelimit_headers_from_error(error: BaseException) -> dict[str, str]:
+    """Collect Groq x-ratelimit-* and retry-after from LiteLLM/httpx exception chain."""
+    keys = (
+        "retry-after",
+        "x-ratelimit-limit-requests",
+        "x-ratelimit-limit-tokens",
+        "x-ratelimit-remaining-requests",
+        "x-ratelimit-remaining-tokens",
+        "x-ratelimit-reset-requests",
+        "x-ratelimit-reset-tokens",
     )
+    out: dict[str, str] = {}
+    visited: set[int] = set()
+    stack: list[BaseException] = [error]
+    while stack:
+        exc = stack.pop()
+        eid = id(exc)
+        if eid in visited:
+            continue
+        visited.add(eid)
+        resp = getattr(exc, "response", None)
+        if resp is not None:
+            h = getattr(resp, "headers", None)
+            if h is not None:
+                for key in keys:
+                    val = h.get(key)
+                    if val is not None and key not in out:
+                        out[key] = str(val)
+        for nxt in (getattr(exc, "__cause__", None), getattr(exc, "__context__", None)):
+            if nxt is not None:
+                stack.append(nxt)
+    return out
+
+
+def _is_transient_network_error(error: BaseException) -> bool:
+    """True for DNS/connect blips (e.g. Windows getaddrinfo 11001) that often succeed on retry."""
+    msg = str(error).lower()
+    if "getaddrinfo" in msg or "11001" in msg:
+        return True
+    if "name or service not known" in msg:
+        return True
+    if "temporary failure in name resolution" in msg:
+        return True
+    if "connection refused" in msg or "connection reset" in msg:
+        return True
+    if "timed out" in msg or "timeout" in msg:
+        return True
+    if "connecterror" in msg.replace(" ", ""):
+        return True
+    cause = getattr(error, "__cause__", None)
+    if cause is not None and cause is not error:
+        return _is_transient_network_error(cause)
+    return False
+
+
+def crew_kickoff_with_retries(max_attempts: int = 5, initial_delay: float = 4.0):
+    """Run crew.kickoff() with backoff on transient DNS/TCP failures."""
+    last_err: BaseException | None = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            return crew.kickoff()
+        except Exception as e:
+            last_err = e
+            if _is_rate_limit_error(e):
+                raise
+            if attempt < max_attempts and _is_transient_network_error(e):
+                delay = min(initial_delay * (2 ** (attempt - 1)), 120.0)
+                print(
+                    f"[{datetime.now()}] Network/DNS error (attempt {attempt}/{max_attempts}): {e!s}. "
+                    f"Retrying in {delay:.0f}s..."
+                )
+                time.sleep(delay)
+                continue
+            raise
+    assert last_err is not None
+    raise last_err
+
+
+def _is_rate_limit_error(error: Exception) -> bool:
+    """Return True if the exception looks like a provider rate-limit/quota error."""
+    message = str(error) if error else ""
+    message_lower = message.lower()
+    compact = message_lower.replace(" ", "").replace("_", "")
+
+    if "ratelimiterror" in compact or "rate_limit_exceeded" in message_lower:
+        return True
+    if "resource_exhausted" in message_lower:
+        return True
+    if "too many requests" in message_lower:
+        return True
+    if "429" in message:
+        return True
+    if "413" in message and (
+        "payload" in message_lower or "too large" in message_lower or "groq" in message_lower
+    ):
+        return True
+    if "tokens per minute" in message_lower or "tpm" in message_lower:
+        return True
+    if "reduce your message" in message_lower or "message size" in message_lower:
+        return True
+    if "quota" in message_lower and ("exceeded" in message_lower or "exhausted" in message_lower):
+        return True
+    return False
+
+def _is_quota_completely_exhausted(error: Exception) -> bool:
+    """Check if quota is completely exhausted vs temporary rate-limited."""
+    message = str(error) if error else ""
+    message_lower = message.lower()
+    return (
+        "limit: 0" in message_lower or
+        "limit:0" in message_lower or
+        "quota exceeded" in message_lower or
+        "insufficient_quota" in message_lower
+    )
+
+def _extract_quota_info(error: Exception) -> dict:
+    """Extract rate-limit info from Groq/LiteLLM errors, including HTTP headers when present.
+
+    Groq publishes limits per model (TPM, RPM, etc.) and returns x-ratelimit-* headers;
+    retry-after is set on 429. See https://console.groq.com/docs/rate-limits
+    """
+    message = str(error) if error else ""
+    message_lower = message.lower()
+    info = {
+        "completely_exhausted": False,
+        "retry_after": None,
+        "quota_type": None,
+        "limit": None,
+        "error_details": None,
+        "groq_ratelimit_headers": {},
+    }
+
+    info["completely_exhausted"] = _is_quota_completely_exhausted(error)
+
+    hdrs = _groq_ratelimit_headers_from_error(error)
+    if hdrs:
+        info["groq_ratelimit_headers"] = hdrs
+        ra = hdrs.get("retry-after")
+        if ra:
+            try:
+                info["retry_after"] = float(ra)
+            except ValueError:
+                pass
+        if hdrs.get("x-ratelimit-limit-tokens"):
+            try:
+                info["tpm_limit"] = int(hdrs["x-ratelimit-limit-tokens"])
+            except ValueError:
+                pass
+        if hdrs.get("x-ratelimit-remaining-tokens") is not None:
+            try:
+                info["tpm_remaining"] = int(hdrs["x-ratelimit-remaining-tokens"])
+            except ValueError:
+                pass
+
+    if info["retry_after"] is None:
+        reset_tok = hdrs.get("x-ratelimit-reset-tokens")
+        if reset_tok:
+            parsed = _parse_groq_duration_to_seconds(reset_tok)
+            if parsed is not None and parsed > 0:
+                info["retry_after"] = min(max(parsed, 2.0), 120.0)
+
+    if info["retry_after"] is None:
+        retry_match = re.search(r"retry.*?(\d+(?:\.\d+)?)\s*s", message, re.IGNORECASE)
+        if retry_match:
+            info["retry_after"] = float(retry_match.group(1))
+    if info["retry_after"] is None:
+        groq_try = re.search(
+            r"try again in\s+(\d+(?:\.\d+)?)\s*s", message_lower, re.IGNORECASE
+        )
+        if groq_try:
+            info["retry_after"] = float(groq_try.group(1))
+
+    if not info["quota_type"]:
+        if "tokens per minute" in message_lower or "tpm" in message_lower:
+            info["quota_type"] = "tpm"
+        elif "free_tier" in message_lower:
+            info["quota_type"] = "free_tier"
+        elif "per day" in message_lower or "daily" in message_lower:
+            info["quota_type"] = "daily"
+        elif "requests" in message_lower and "per minute" in message_lower:
+            info["quota_type"] = "rpm"
+        elif "requests" in message_lower:
+            info["quota_type"] = "requests"
+        elif "tokens" in message_lower:
+            info["quota_type"] = "tokens"
+
+    limit_match = re.search(r"limit:\s*(\d+)", message, re.IGNORECASE)
+    if limit_match:
+        info["limit"] = int(limit_match.group(1))
+
+    return info
 
 def generate_article_task():
     """Background task to generate article"""
@@ -668,17 +872,63 @@ def generate_article_task():
         
         # Generate the article
         try:
-            result = crew.kickoff()
+            result = crew_kickoff_with_retries()
         except Exception as kickoff_err:
-            if GeminiClientError and isinstance(kickoff_err, GeminiClientError):
-                if getattr(kickoff_err, "status_code", None) == 429 or _is_gemini_quota_error(kickoff_err):
-                    backoff_seconds = int(os.getenv("GEMINI_QUOTA_BACKOFF_SECONDS", "1800"))
-                    print(f"[{datetime.now()}] ❌ Gemini quota exhausted (429). Will retry after backoff: {backoff_seconds}s")
-                    return
-            if _is_gemini_quota_error(kickoff_err):
-                backoff_seconds = int(os.getenv("GEMINI_QUOTA_BACKOFF_SECONDS", "1800"))
-                print(f"[{datetime.now()}] ❌ Gemini quota exhausted. Will retry after backoff: {backoff_seconds}s")
-                return
+            if _is_rate_limit_error(kickoff_err):
+                quota_info = _extract_quota_info(kickoff_err)
+                
+                # Check if it's truly exhausted or just rate limited
+                is_truly_exhausted = quota_info.get("completely_exhausted", False)
+                
+                # If we have a retry_after time, it's likely just rate limiting, not exhaustion
+                retry_after = quota_info.get("retry_after")
+                if retry_after and retry_after < 300:  # Less than 5 minutes = rate limit, not exhaustion
+                    is_truly_exhausted = False
+                
+                if is_truly_exhausted:
+                    print(f"[{datetime.now()}] ❌ Groq API quota COMPLETELY EXHAUSTED (limit: 0)")
+                    print(f"[{datetime.now()}] ⚠️  Provider quota has been fully used. Quota typically resets daily.")
+                    print(f"[{datetime.now()}] 💡 Solutions:")
+                    print(f"[{datetime.now()}]    1. Wait for daily quota reset (usually at midnight UTC)")
+                    print(f"[{datetime.now()}]    2. Add billing/upgrade plan for higher limits")
+                    print(f"[{datetime.now()}]    3. Use a different API key with available quota")
+                    print(f"[{datetime.now()}]    4. See limits for your org: https://console.groq.com/settings/limits")
+                    if retry_after:
+                        print(f"[{datetime.now()}] ⏰ API suggests retrying after {retry_after:.1f} seconds")
+                    # Raise custom exception so scheduler can handle it
+                    raise LLMRateLimitError(
+                        "Groq API quota completely exhausted (limit: 0)",
+                        quota_info
+                    )
+                else:
+                    # Groq: RPM, TPM, RPD, TPD at org level; 429 + retry-after; x-ratelimit-* headers.
+                    backoff_seconds = max(int(retry_after or 60), 2)
+                    gh = quota_info.get("groq_ratelimit_headers") or {}
+                    if gh:
+                        print(f"[{datetime.now()}] Groq x-ratelimit / retry headers: {gh}")
+                    print(
+                        f"[{datetime.now()}] ⚠️  Groq rate limit (often 429; oversized TPM may return 413). "
+                        f"Docs: https://console.groq.com/docs/rate-limits"
+                    )
+                    print(
+                        f"[{datetime.now()}] 📊 Limits are per organization (RPM, TPM, RPD, TPD). "
+                        f"Your caps: https://console.groq.com/settings/limits"
+                    )
+                    if quota_info.get("quota_type") == "tpm":
+                        print(
+                            f"[{datetime.now()}] 💡 TPM: shorten prompts or pick a higher-TPM model "
+                            f"(e.g. llama-3.3-70b-versatile vs openai/gpt-oss-120b per Groq table)."
+                        )
+                    print(f"[{datetime.now()}] ⏰ Will retry after {backoff_seconds}s ({backoff_seconds/60:.1f} minutes)")
+                    quota_info["completely_exhausted"] = False
+                    quota_info["retry_after"] = backoff_seconds
+                    raise LLMRateLimitError(
+                        f"Groq rate limited. Retry after {backoff_seconds}s",
+                        quota_info
+                    )
+            
+            # If not a quota error, re-raise the original exception
+            print(f"[{datetime.now()}] ERROR generating article: {str(kickoff_err)}")
             raise
         article_data = parse_article(result)
         article_data["id"] = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -692,7 +942,7 @@ def generate_article_task():
             similarity_threshold=0.4  # 40% topic overlap considered similar
         )
         
-        # If similar articles found, add reference to the most recent one
+        # If similar articles found, attach metadata only (not shown inside article body)
         if similar_articles:
             most_similar = similar_articles[0]
             prev_article = most_similar['article']
@@ -705,9 +955,8 @@ def generate_article_task():
             # Check if this is truly a duplicate (very high similarity) or new information
             if similarity_score >= 0.7:
                 print(f"[{datetime.now()}] WARNING: Very high similarity ({similarity_score:.2%}) - this might be a duplicate")
-                print(f"[{datetime.now()}] Proceeding anyway, but adding reference to previous article")
+                print(f"[{datetime.now()}] Proceeding anyway; related_articles metadata will list the prior piece")
             
-            # Add reference to previous article in the new article
             prev_reference = {
                 "id": prev_article.get('id'),
                 "title": prev_article.get('title'),
@@ -715,10 +964,7 @@ def generate_article_task():
                 "similarity": similarity_score
             }
             article_data["related_articles"] = [prev_reference]
-            
-            # Add reference text to content
-            reference_text = f"\n\n[Related Article: This article relates to a previous article published on {prev_article.get('created_at', 'unknown date')[:10]}: '{prev_article.get('title', 'Previous Article')}']"
-            article_data["content"] = article_data["content"] + reference_text
+            # Related articles stay in metadata only (related_articles / API)—not injected into body text
         else:
             print(f"[{datetime.now()}] No similar articles found - this is a new topic")
             article_data["related_articles"] = []
@@ -781,7 +1027,7 @@ def generate_article_task():
             print(f"[{datetime.now()}] ✅ Article generated and saved to Supabase: {article_data['title']} (ID: {article_data['id']})")
             print(f"[{datetime.now()}] 📸 Images saved: {image_count}")
             if similar_articles:
-                print(f"[{datetime.now()}] Article references {len(similar_articles)} related article(s)")
+                print(f"[{datetime.now()}] Article metadata lists {len(similar_articles)} related article(s)")
         else:
             print(f"[{datetime.now()}] ❌ ERROR: Failed to save article to Supabase: {article_data['title']}")
             print(f"[{datetime.now()}] Article data will be lost!")
@@ -792,20 +1038,54 @@ def generate_article_task():
 
 def scheduler_worker():
     """Background worker that runs article generation every 30 minutes"""
-    print(f"[{datetime.now()}] Scheduler worker started. Will generate articles every 30 minutes.")
+    print(f"[{datetime.now()}] ✅ Scheduler worker started. Will generate articles every 30 minutes.")
+    consecutive_quota_errors = 0
+    base_sleep_time = 1800  # 30 minutes in seconds
+    sleep_time = base_sleep_time  # Default sleep time
+    
     while True:
         try:
             generate_article_task()
+            # Reset error counter on success
+            consecutive_quota_errors = 0
+            sleep_time = base_sleep_time  # Reset to normal interval on success
+        except LLMRateLimitError as quota_err:
+            # Handle quota errors - distinguish between rate limits and quota exhaustion
+            quota_info = quota_err.quota_info
+            retry_after = quota_info.get("retry_after")
+            is_exhausted = quota_info.get("completely_exhausted", False)
+            
+            if is_exhausted:
+                # Completely exhausted - wait longer (1 hour)
+                consecutive_quota_errors += 1
+                sleep_time = 3600
+                print(f"[{datetime.now()}] 💤 Quota completely exhausted. Sleeping for {sleep_time/60:.0f} minutes before next attempt...")
+            elif retry_after and retry_after < 300:
+                # Short retry time (< 5 min) = rate limit, not exhaustion
+                # Just wait the suggested time and retry - don't use exponential backoff
+                sleep_time = int(retry_after) + 5  # Add small buffer
+                consecutive_quota_errors = 0  # Reset counter for rate limits
+                print(f"[{datetime.now()}] ⏸️  Rate limited (temporary). Waiting {sleep_time}s ({sleep_time/60:.1f} minutes) as suggested by API...")
+            else:
+                # Longer retry time or no retry time = use exponential backoff
+                consecutive_quota_errors += 1
+                sleep_time = min(base_sleep_time * (2 ** (consecutive_quota_errors - 1)), 14400)
+                if retry_after:
+                    sleep_time = max(int(retry_after), sleep_time)
+                print(f"[{datetime.now()}] 💤 Rate limited. Sleeping for {sleep_time/60:.1f} minutes (exponential backoff: attempt #{consecutive_quota_errors})...")
         except Exception as e:
-            print(f"[{datetime.now()}] ERROR in scheduler: {str(e)}")
+            # Other errors - just log and continue with normal interval
+            error_str = str(e)
+            print(f"[{datetime.now()}] ❌ ERROR in scheduler: {error_str}")
             import traceback
             traceback.print_exc()
-            # Continue running even if one generation fails
-            print(f"[{datetime.now()}] Scheduler will continue and retry in 30 minutes...")
+            sleep_time = base_sleep_time
+            consecutive_quota_errors = 0  # Reset quota error counter on non-quota errors
+            print(f"[{datetime.now()}] ⚠️  Non-quota error. Will retry in {sleep_time/60:.0f} minutes...")
         
-        # Wait 30 minutes (1800 seconds)
-        print(f"[{datetime.now()}] Scheduler sleeping for 30 minutes (1800 seconds)...")
-        time.sleep(1800)
+        # Wait before next attempt
+        print(f"[{datetime.now()}] 😴 Scheduler sleeping for {sleep_time/60:.1f} minutes ({sleep_time} seconds)...")
+        time.sleep(sleep_time)
 
 @app.route('/api/generate-article', methods=['POST'])
 def generate_article():
@@ -816,21 +1096,37 @@ def generate_article():
         
         # Generate the article
         try:
-            result = crew.kickoff()
+            result = crew_kickoff_with_retries()
         except Exception as kickoff_err:
-            if GeminiClientError and isinstance(kickoff_err, GeminiClientError):
-                if getattr(kickoff_err, "status_code", None) == 429 or _is_gemini_quota_error(kickoff_err):
-                    return jsonify({
-                        "success": False,
-                        "error": "Gemini quota exhausted. Please add billing or try again later.",
-                        "code": 429
-                    }), 429
-            if _is_gemini_quota_error(kickoff_err):
+            if _is_rate_limit_error(kickoff_err):
+                quota_info = _extract_quota_info(kickoff_err)
+                
+                if quota_info["completely_exhausted"]:
+                    error_message = (
+                        "Groq API quota completely exhausted (limit: 0). "
+                        "Provider quota has been fully used. "
+                        "Quota typically resets daily at midnight UTC. "
+                        "Solutions: Wait for daily reset, add billing for higher limits, "
+                        "or use a different API key. Org limits: https://console.groq.com/settings/limits"
+                    )
+                else:
+                    retry_after = quota_info.get("retry_after", 1800)
+                    error_message = (
+                        "Groq rate limit hit (org-level RPM, TPM, RPD, TPD; whichever trips first). "
+                        f"Retry after {retry_after:.0f} seconds. "
+                        "Docs: https://console.groq.com/docs/rate-limits — "
+                        "exact caps: https://console.groq.com/settings/limits"
+                    )
+                
                 return jsonify({
                     "success": False,
-                    "error": "Gemini quota exhausted. Please add billing or try again later.",
-                    "code": 429
+                    "error": error_message,
+                    "code": 429,
+                    "quota_info": quota_info,
+                    "retry_after": quota_info.get("retry_after")
                 }), 429
+            
+            # If not a quota error, re-raise
             raise
         article_data = parse_article(result)
         article_data["id"] = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -844,13 +1140,12 @@ def generate_article():
             similarity_threshold=0.4
         )
         
-        # If similar articles found, add reference
+        # If similar articles found, store related_articles metadata only (not in body)
         if similar_articles:
             most_similar = similar_articles[0]
             prev_article = most_similar['article']
             similarity_score = most_similar['similarity']
             
-            # Add reference to previous article
             prev_reference = {
                 "id": prev_article.get('id'),
                 "title": prev_article.get('title'),
@@ -858,10 +1153,7 @@ def generate_article():
                 "similarity": similarity_score
             }
             article_data["related_articles"] = [prev_reference]
-            
-            # Add reference text to content
-            reference_text = f"\n\n[Related Article: This article relates to a previous article published on {prev_article.get('created_at', 'unknown date')[:10]}: '{prev_article.get('title', 'Previous Article')}']"
-            article_data["content"] = article_data["content"] + reference_text
+            # Related articles stay in metadata only—not appended to article content
         else:
             article_data["related_articles"] = []
         

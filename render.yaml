@@ -1,0 +1,32 @@
+# Render Blueprint: https://render.com/docs/blueprint-spec
+# Set secret values in the Render dashboard (Environment) or when first linking the repo.
+services:
+  - type: web
+    name: flash-news-backend
+    runtime: python
+    rootDir: MODEL
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --timeout 300 --access-logfile - --error-logfile -
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: GROQ_API_KEY
+        sync: false
+      # Optional: comma/newline-separated keys for research, fact-check, write, image curator (slots 0–3).
+      - key: GROQ_API_KEYS
+        sync: false
+      # Optional per-step models (see MODEL/.env.example).
+      - key: GROQ_MODEL_RESEARCH
+        sync: false
+      - key: GROQ_MODEL_FACT_CHECK
+        sync: false
+      - key: GROQ_MODEL_IMAGE
+        sync: false
+      - key: GROQ_MODEL_WRITE
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
